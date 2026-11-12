@@ -4,11 +4,11 @@ Custom page add-in untuk membuat, melihat, mengubah, dan membatalkan booking ken
 
 ## Konfigurasi sebelum digunakan
 
-1. Di `fleet-summary.html`, isi `BOOKABLE_DEVICE_IDS` dengan satu sampai lima `Device.id` berbeda yang disetujui. Untuk smoke test, cukup gunakan satu ID; tambahkan empat ID lain saat siap. Daftar kendaraan aktif dan ID-nya akan tampil pada halaman untuk membantu menemukan ID.
+1. Daftar kendaraan diambil dengan `Get Device` setiap add-in dibuka. Semua kendaraan yang dapat diakses akun saat itu ditampilkan; kendaraan aktif dapat dipilih, sedangkan kendaraan nonaktif ditampilkan tetapi tidak bisa dibooking. Pastikan hak akses MyGeotab pengguna sesuai.
 2. `ADDIN_ID` harus tetap sama untuk semua versi add-in ini pada database MyGeotab yang sama. Jangan membuat ID baru setiap sesi. Jika membuat add-in lain di database yang sama, buat ID unik baru menggunakan [Geotab Storage API instructions](https://developers.geotab.com/myGeotab/addIns/addInStorage/).
-3. Host `fleet-summary.html` dan `booking-domain.js` bersama-sama pada HTTPS. URL di `fleet-summary.html` memuat file JavaScript relatif, jadi keduanya harus tetap dalam folder yang sama.
-4. Ganti URL contoh dan `supportEmail` di `configuration.json`, lalu tambahkan JSON konfigurasi itu di **Administration > System > System Settings > Add-Ins**.
-5. Berikan clearance MyGeotab yang mengizinkan pengguna membaca dan menulis `AddInData`. Add-in menampilkan tombol ubah/batal hanya untuk pembuat booking. Pengguna `ViewOnly` tidak dapat membuat atau mengubah booking.
+3. Host `fleet-summary.html`, `booking-domain.js`, dan `booking.css` bersama-sama pada HTTPS. Semua asset dimuat melalui URL relatif, jadi ketiganya harus tetap dalam folder yang sama.
+4. Pastikan URL di `configuration.json` menunjuk ke file `fleet-summary.html` yang sudah di-host dan isi `supportEmail`, lalu tambahkan JSON konfigurasi itu di **Administration > System > System Settings > Add-Ins**.
+5. Berikan clearance MyGeotab yang mengizinkan pengguna membaca daftar `Device` serta membaca dan menulis `AddInData`. Add-in menampilkan tombol ubah/batal hanya untuk pembuat booking. Pengguna `ViewOnly` tidak dapat membuat atau mengubah booking.
 
 ## Perilaku booking
 

@@ -4,152 +4,79 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Booking Kendaraan</title>
-  <style>
-    :root {
-      color-scheme: light;
-      font-family: Arial, sans-serif;
-      color: #202124;
-      background: #f5f6f8;
-    }
-
-    * { box-sizing: border-box; }
-
-    body { margin: 0; padding: 24px; }
-    main { max-width: 1000px; margin: 0 auto; }
-    h1 { margin: 0 0 8px; font-size: 26px; }
-    h2 { margin: 0 0 16px; font-size: 18px; }
-    p { line-height: 1.5; }
-
-    .intro, .panel, .notice {
-      background: #fff;
-      border: 1px solid #e2e5e9;
-      border-radius: 8px;
-      padding: 18px;
-      margin-bottom: 16px;
-    }
-
-    .intro p { margin: 0; color: #5f6368; }
-    .notice { border-left: 4px solid #d99000; color: #5f4700; }
-    .notice[hidden] { display: none; }
-    #status { min-height: 24px; margin: 0 0 12px; }
-    #status[data-error="true"] { color: #b3261e; }
-    #status[data-error="false"] { color: #137333; }
-
-    form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
-    .field { display: flex; flex-direction: column; gap: 6px; }
-    .field-wide { grid-column: 1 / -1; }
-    label { font-size: 13px; font-weight: 600; }
-    input, select, button { font: inherit; }
-    input, select {
-      width: 100%;
-      min-height: 40px;
-      padding: 8px 10px;
-      border: 1px solid #b7bcc2;
-      border-radius: 4px;
-      background: #fff;
-    }
-
-    button {
-      min-height: 38px;
-      padding: 8px 14px;
-      border: 0;
-      border-radius: 4px;
-      background: #1769aa;
-      color: #fff;
-      cursor: pointer;
-    }
-
-    button:hover:not(:disabled) { background: #0e548c; }
-    button:disabled { cursor: not-allowed; opacity: .55; }
-    button.secondary { background: #5f6368; }
-    button.secondary:hover:not(:disabled) { background: #45494d; }
-    button.danger { background: #b3261e; }
-    button.danger:hover:not(:disabled) { background: #8c1d18; }
-    .form-actions { display: flex; align-items: center; gap: 8px; }
-
-    .booking-list { display: grid; gap: 10px; }
-    .booking {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 16px;
-      padding: 14px;
-      border: 1px solid #e2e5e9;
-      border-radius: 6px;
-    }
-    .booking-details { min-width: 0; }
-    .booking-title { margin: 0 0 5px; font-weight: 700; }
-    .booking-meta { margin: 0; color: #5f6368; font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; }
-    .booking-actions { display: flex; flex-wrap: wrap; gap: 8px; }
-    .empty { color: #5f6368; }
-
-    .vehicle-inventory { margin: 0; padding-left: 20px; }
-    .vehicle-inventory li { margin: 4px 0; overflow-wrap: anywhere; }
-    code { font-size: 12px; }
-
-    @media (max-width: 640px) {
-      body { padding: 14px; }
-      form { grid-template-columns: 1fr; }
-      .field-wide { grid-column: auto; }
-      .booking { flex-direction: column; }
-    }
-  </style>
+  <link rel="stylesheet" href="booking.css">
 </head>
 <body>
-  <main>
-    <header class="intro">
-      <h1>Booking Kendaraan</h1>
-      <p>Buat, ubah, dan batalkan booking kendaraan. Data disimpan sebagai <code>AddInData</code> di database MyGeotab.</p>
+  <main class="booking-app">
+    <header class="hero">
+      <div class="hero-mark" aria-hidden="true">BK</div>
+      <div>
+        <p class="eyebrow">MANAJEMEN ARMADA</p>
+        <h1>Booking Kendaraan</h1>
+        <p class="hero-copy">Atur jadwal pemakaian kendaraan operasional dalam satu tempat.</p>
+      </div>
     </header>
 
-    <p id="status" role="status" aria-live="polite">Menunggu MyGeotab...</p>
+    <div id="status" class="status" role="status" aria-live="polite">Menghubungkan ke MyGeotab...</div>
 
-    <aside id="concurrencyNotice" class="notice">
-      Pemeriksaan bentrok tidak atomik. Jika dua pengguna menyimpan slot yang sama pada saat bersamaan, booking ganda masih mungkin terjadi. Muat ulang data sebelum konfirmasi dan hubungi admin jika ada bentrok.
-    </aside>
+    <div class="booking-layout">
+      <section class="panel" aria-labelledby="formTitle">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">JADWAL BARU</p>
+            <h2 id="formTitle">Buat booking</h2>
+          </div>
+        </div>
+        <form id="bookingForm" class="booking-form">
+          <div class="field field-wide">
+            <label for="deviceId">Kendaraan</label>
+            <select id="deviceId" name="deviceId" required disabled>
+              <option value="">Memuat kendaraan...</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="startLocal">Mulai</label>
+            <input id="startLocal" name="startLocal" type="datetime-local" required disabled>
+          </div>
+          <div class="field">
+            <label for="endLocal">Selesai</label>
+            <input id="endLocal" name="endLocal" type="datetime-local" required disabled>
+          </div>
+          <div class="field field-wide">
+            <label for="purpose">Keperluan <span class="optional">(opsional)</span></label>
+            <input id="purpose" name="purpose" type="text" maxlength="160" placeholder="Contoh: kunjungan ke pelanggan" disabled>
+          </div>
+          <div class="field-wide form-actions">
+            <button id="submitButton" type="submit" disabled>Buat booking</button>
+            <button id="cancelEditButton" class="secondary" type="button" hidden>Batalkan perubahan</button>
+          </div>
+        </form>
+      </section>
 
-    <section class="panel" aria-labelledby="formTitle">
-      <h2 id="formTitle">Buat booking</h2>
-      <form id="bookingForm">
-        <div class="field field-wide">
-          <label for="deviceId">Kendaraan</label>
-          <select id="deviceId" name="deviceId" required disabled>
-            <option value="">Memuat kendaraan...</option>
-          </select>
+      <section class="panel bookings-panel" aria-labelledby="bookingsTitle">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">AGENDA</p>
+            <h2 id="bookingsTitle">Daftar booking</h2>
+          </div>
         </div>
-        <div class="field">
-          <label for="startLocal">Mulai (waktu lokal)</label>
-          <input id="startLocal" name="startLocal" type="datetime-local" required disabled>
+        <div id="bookingList" class="booking-list">
+          <p class="empty">Booking akan ditampilkan setelah data dimuat.</p>
         </div>
-        <div class="field">
-          <label for="endLocal">Selesai (waktu lokal)</label>
-          <input id="endLocal" name="endLocal" type="datetime-local" required disabled>
-        </div>
-        <div class="field field-wide">
-          <label for="purpose">Keperluan (opsional)</label>
-          <input id="purpose" name="purpose" type="text" maxlength="160" disabled>
-        </div>
-        <div class="field field-wide form-actions">
-          <button id="submitButton" type="submit" disabled>Buat booking</button>
-          <button id="cancelEditButton" class="secondary" type="button" hidden>Batalkan perubahan</button>
-        </div>
-      </form>
-    </section>
+      </section>
+    </div>
 
-    <section class="panel" aria-labelledby="bookingsTitle">
-      <h2 id="bookingsTitle">Daftar booking</h2>
-      <div id="bookingList" class="booking-list">
-        <p class="empty">Booking akan ditampilkan setelah data dimuat.</p>
-      </div>
-    </section>
-
-    <section class="panel" aria-labelledby="vehicleSetupTitle">
-      <h2 id="vehicleSetupTitle">Kendaraan yang tersedia</h2>
-      <p>Untuk uji awal, konfigurasi dapat berisi satu <code>Device.id</code>. Tambahkan sampai lima ID kendaraan berbeda untuk penggunaan penuh. Daftar berikut membantu menemukan ID dari database ini.</p>
+    <details class="panel vehicle-panel">
+      <summary id="vehicleSetupTitle">Daftar kendaraan dan ID</summary>
+      <p>Daftar dimuat dari API MyGeotab saat add-in dibuka. Kendaraan mengikuti hak akses akun; kendaraan aktif dapat dipilih, sedangkan kendaraan nonaktif hanya ditampilkan.</p>
       <ul id="vehicleInventory" class="vehicle-inventory">
         <li>Memuat kendaraan...</li>
       </ul>
-    </section>
+    </details>
+
+    <aside class="notice">
+      <strong>Catatan bentrok:</strong> pemeriksaan dilakukan sebelum menyimpan, tetapi tidak atomik. Jika dua pengguna memesan slot yang sama bersamaan, booking ganda masih mungkin terjadi.
+    </aside>
   </main>
 
   <script src="booking-domain.js"></script>
@@ -158,9 +85,6 @@
       'use strict';
 
       var ADDIN_ID = 'azg3NWI4YTUtNDczZS00NzF';
-      var BOOKABLE_DEVICE_IDS = [
-        'W0LGT6ES0F1000000'
-      ];
 
       var domain = window.VehicleBookingDomain;
       var form = document.getElementById('bookingForm');
@@ -214,10 +138,6 @@
         statusElement.setAttribute('data-error', isError ? 'true' : 'false');
       }
 
-      function isDeviceConfigurationValid() {
-        return domain.isValidDeviceIdConfiguration(BOOKABLE_DEVICE_IDS);
-      }
-
       function formatLocalInput(date) {
         function pad(value) { return String(value).padStart(2, '0'); }
         return date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' +
@@ -247,54 +167,49 @@
         cancelEditButton.disabled = isBusy;
       }
 
-      function getActiveDevices(devices) {
-        var now = Date.now();
-        return devices.filter(function (device) {
-          return !device.activeTo || new Date(device.activeTo).getTime() > now;
-        });
+      function isDeviceActive(device) {
+        if (!device.activeTo) return true;
+        var activeTo = new Date(device.activeTo).getTime();
+        return Number.isFinite(activeTo) && activeTo > Date.now();
       }
 
       function renderDeviceInventory(devices) {
         vehicleInventory.textContent = '';
         if (devices.length === 0) {
           var empty = document.createElement('li');
-          empty.textContent = 'Tidak ada kendaraan aktif yang dapat diakses.';
+          empty.textContent = 'Tidak ada kendaraan yang dapat diakses akun ini.';
           vehicleInventory.appendChild(empty);
           return;
         }
 
         devices.forEach(function (device) {
           var item = document.createElement('li');
-          item.textContent = (device.name || 'Kendaraan tanpa nama') + ' — ' + device.id;
+          item.textContent = (device.name || 'Kendaraan tanpa nama') + ' — ' + device.id +
+            (isDeviceActive(device) ? ' (Aktif)' : ' (Nonaktif)');
           vehicleInventory.appendChild(item);
         });
       }
 
       function renderDeviceOptions(devices) {
-        var approvedIds = BOOKABLE_DEVICE_IDS;
-        var approvedDevices = devices.filter(function (device) {
-          return approvedIds.indexOf(device.id) !== -1;
-        });
+        var availableDevices = devices.filter(isDeviceActive);
 
         deviceSelect.textContent = '';
         var placeholder = document.createElement('option');
         placeholder.value = '';
-        placeholder.textContent = approvedDevices.length ? 'Pilih kendaraan' : 'Tidak ada kendaraan terkonfigurasi';
+        placeholder.textContent = availableDevices.length ? 'Pilih kendaraan' : 'Tidak ada kendaraan aktif';
         deviceSelect.appendChild(placeholder);
 
-        approvedDevices.forEach(function (device) {
+        devices.forEach(function (device) {
           var option = document.createElement('option');
           option.value = device.id;
-          option.textContent = device.name || device.id;
+          option.textContent = (device.name || 'Kendaraan tanpa nama') + ' — ' + device.id +
+            (isDeviceActive(device) ? '' : ' (Nonaktif)');
+          option.disabled = !isDeviceActive(device);
           deviceSelect.appendChild(option);
         });
 
-        var missingIds = approvedIds.filter(function (id) {
-          return id.indexOf('REPLACE_WITH_') === 0 || !devices.some(function (device) { return device.id === id; });
-        });
         return {
-          approvedDevices: approvedDevices,
-          missingIds: missingIds
+          availableCount: availableDevices.length
         };
       }
 
@@ -403,24 +318,24 @@
           ]);
           if (sequence !== loadSequence) return null;
 
-          currentDevices = getActiveDevices(results[0]);
+          currentDevices = results[0].filter(function (device) {
+            return device && device.id;
+          });
           currentBookings = normalizeRecords(results[1]);
           currentUserName = results[2].userName || '';
           renderDeviceInventory(currentDevices);
           renderBookings();
 
           var configuration = renderDeviceOptions(currentDevices);
-          canBook = isDeviceConfigurationValid() &&
-            configuration.approvedDevices.length === BOOKABLE_DEVICE_IDS.length &&
-            configuration.missingIds.length === 0;
+          canBook = configuration.availableCount > 0;
           updateFormState();
 
-          if (!isDeviceConfigurationValid()) {
-            setStatus('Konfigurasi belum valid: isi BOOKABLE_DEVICE_IDS dengan 1 sampai 5 Device.id berbeda yang disetujui.', true);
-          } else if (configuration.missingIds.length) {
-            setStatus('Satu atau lebih Device.id di BOOKABLE_DEVICE_IDS tidak ditemukan atau tidak aktif. Periksa daftar kendaraan di bawah.', true);
+          if (currentDevices.length === 0) {
+            setStatus('Tidak ada kendaraan yang dapat diakses. Periksa hak akses Device untuk akun MyGeotab ini.', true);
+          } else if (configuration.availableCount === 0) {
+            setStatus('Kendaraan ditemukan, tetapi tidak ada kendaraan aktif yang dapat dibooking.', true);
           } else if (!quiet) {
-            setStatus('Data booking berhasil dimuat.', false);
+            setStatus('Data berhasil dimuat. ' + configuration.availableCount + ' kendaraan aktif tersedia untuk booking.', false);
           }
           return currentBookings.slice();
         } catch (error) {
@@ -475,7 +390,7 @@
         try {
           var interval = domain.toUtcInterval(startInput.value, endInput.value);
           var device = currentDevices.find(function (item) { return item.id === deviceSelect.value; });
-          if (!device) throw new Error('Pilih kendaraan yang valid.');
+          if (!device || !isDeviceActive(device)) throw new Error('Pilih kendaraan aktif yang valid.');
 
           var freshRecords = normalizeRecords(await getBookingRecords(currentApi));
           var recordsForConflictCheck = freshRecords.filter(function (record) {

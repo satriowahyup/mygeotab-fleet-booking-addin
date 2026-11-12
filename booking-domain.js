@@ -60,20 +60,8 @@
       pad(date.getDate()) + 'T' + pad(date.getHours()) + ':' + pad(date.getMinutes());
   }
 
-  function isValidDeviceIdConfiguration(deviceIds) {
-    if (!Array.isArray(deviceIds) || deviceIds.length < 1 || deviceIds.length > 5) return false;
-    return deviceIds.every(function (id, index, ids) {
-      return typeof id === 'string' &&
-        id.length > 0 &&
-        id.trim() === id &&
-        id.indexOf('REPLACE_WITH_') !== 0 &&
-        ids.indexOf(id) === index;
-    });
-  }
-
   return {
     hasConflict: hasConflict,
-    isValidDeviceIdConfiguration: isValidDeviceIdConfiguration,
     toLocalDateTimeInput: toLocalDateTimeInput,
     toUtcInterval: toUtcInterval
   };

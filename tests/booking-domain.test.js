@@ -49,12 +49,3 @@ test('converts local form values to valid UTC intervals and rejects invalid inte
   assert.throws(() => domain.toUtcInterval(end, start), /harus setelah/);
   assert.throws(() => domain.toUtcInterval('', end), /wajib diisi/);
 });
-
-test('accepts one to five distinct configured device IDs', () => {
-  assert.equal(domain.isValidDeviceIdConfiguration(['vehicle-1']), true);
-  assert.equal(domain.isValidDeviceIdConfiguration(['vehicle-1', 'vehicle-2']), true);
-  assert.equal(domain.isValidDeviceIdConfiguration([]), false);
-  assert.equal(domain.isValidDeviceIdConfiguration(['vehicle-1', 'vehicle-1']), false);
-  assert.equal(domain.isValidDeviceIdConfiguration(['REPLACE_WITH_DEVICE_ID_1']), false);
-  assert.equal(domain.isValidDeviceIdConfiguration(['1', '2', '3', '4', '5', '6']), false);
-});

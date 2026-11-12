@@ -44,9 +44,9 @@ Untuk lima kendaraan dengan risiko bentrok yang dapat ditangani secara operasion
 
 ## Implementasi pada repository
 
-Implementasi berada pada `fleet-summary.html`, dengan validasi dan pemeriksaan interval di `booking-domain.js`. Konfigurasi add-in untuk URL hosting ada di `configuration.json`; instruksi setup dan tes ada di `README.md`.
+Implementasi berada pada `fleet-summary.html`, dengan styling di `booking.css` dan validasi/pemeriksaan interval di `booking-domain.js`. Konfigurasi add-in untuk URL hosting ada di `configuration.json`; instruksi setup dan tes ada di `README.md`.
 
-Sebelum digunakan, isi `BOOKABLE_DEVICE_IDS` di `fleet-summary.html` dengan satu sampai lima ID kendaraan berbeda yang disetujui. Satu ID cukup untuk smoke test; tambahkan empat ID lain untuk mencakup seluruh armada. Sesuaikan juga URL hosting dan `supportEmail` pada konfigurasi. Halaman mendukung membuat, mengubah, dan membatalkan booking; pembatalan menyimpan status `cancelled` untuk riwayat. Pengguna hanya dapat mengubah atau membatalkan booking yang dibuat olehnya.
+Daftar kendaraan dimuat langsung dari MyGeotab menggunakan `Get` untuk `Device` setiap kali add-in dimuat. Semua device yang dikembalikan API ditampilkan; device aktif dapat dipesan dan device nonaktif tetap terlihat tetapi dinonaktifkan di pilihan. Hasil tetap mengikuti hak akses akun pengguna. Sesuaikan URL hosting dan `supportEmail` pada konfigurasi. Halaman mendukung membuat, mengubah, dan membatalkan booking; pembatalan menyimpan status `cancelled` untuk riwayat. Pengguna hanya dapat mengubah atau membatalkan booking yang dibuat olehnya.
 
 Tes unit domain dijalankan dengan `node --test tests/booking-domain.test.js`. Pengujian di tenant MyGeotab tetap diperlukan untuk memverifikasi izin `AddInData`, konfigurasi Add-In, zona waktu browser, dan skenario dua pengguna bersamaan.
 
