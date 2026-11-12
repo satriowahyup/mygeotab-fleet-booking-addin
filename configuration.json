@@ -1,0 +1,15 @@
+{
+  "name": "Vehicle Booking",
+  "supportEmail": "replace-with-support-email@example.com",
+  "version": "1.0.0",
+  "items": [
+    {
+      "url": "https://YOUR_HTTPS_HOST/fleet-summary.html",
+      "path": "ActivityLink/",
+      "menuName": {
+        "en": "Vehicle Booking",
+        "id": "Booking Kendaraan"
+      }
+    }
+  ]
+}

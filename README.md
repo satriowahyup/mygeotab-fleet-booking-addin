@@ -1,2 +1,28 @@
-# mygeotab-add-in
-The customize add in dashboard for mygeotab
+# MyGeotab vehicle booking add-in
+
+Custom page add-in untuk membuat, melihat, mengubah, dan membatalkan booking kendaraan. Record booking disimpan sebagai `AddInData` di database MyGeotab; tidak ada database eksternal.
+
+## Konfigurasi sebelum digunakan
+
+1. Di `fleet-summary.html`, isi `BOOKABLE_DEVICE_IDS` dengan satu sampai lima `Device.id` berbeda yang disetujui. Untuk smoke test, cukup gunakan satu ID; tambahkan empat ID lain saat siap. Daftar kendaraan aktif dan ID-nya akan tampil pada halaman untuk membantu menemukan ID.
+2. `ADDIN_ID` harus tetap sama untuk semua versi add-in ini pada database MyGeotab yang sama. Jangan membuat ID baru setiap sesi. Jika membuat add-in lain di database yang sama, buat ID unik baru menggunakan [Geotab Storage API instructions](https://developers.geotab.com/myGeotab/addIns/addInStorage/).
+3. Host `fleet-summary.html` dan `booking-domain.js` bersama-sama pada HTTPS. URL di `fleet-summary.html` memuat file JavaScript relatif, jadi keduanya harus tetap dalam folder yang sama.
+4. Ganti URL contoh dan `supportEmail` di `configuration.json`, lalu tambahkan JSON konfigurasi itu di **Administration > System > System Settings > Add-Ins**.
+5. Berikan clearance MyGeotab yang mengizinkan pengguna membaca dan menulis `AddInData`. Add-in menampilkan tombol ubah/batal hanya untuk pembuat booking. Pengguna `ViewOnly` tidak dapat membuat atau mengubah booking.
+
+## Perilaku booking
+
+- Waktu diinput dalam zona waktu browser, lalu disimpan sebagai ISO-8601 UTC.
+- Booking aktif untuk kendaraan yang sama ditolak jika interval waktu bertumpang tindih. Interval yang bersisian, misalnya booking kedua mulai tepat saat booking pertama selesai, diperbolehkan.
+- Pembatalan mengubah status menjadi `cancelled`; record tidak dihapus.
+- Pemeriksaan bentrok di klien bukan transaksi atomik. Dua pengguna dapat menyimpan booking bertumpang tindih secara bersamaan. Halaman memeriksa ulang setelah menyimpan dan memberi peringatan jika bentrok terdeteksi; bisnis yang memerlukan jaminan keras perlu backend transaksional.
+
+## Pengembangan dan pengujian
+
+Logika validasi waktu dan bentrok berada di `booking-domain.js`. Jalankan tes dengan:
+
+```sh
+node --test tests/booking-domain.test.js
+```
+
+Referensi utama: [Geotab Storage API](https://developers.geotab.com/myGeotab/addIns/addInStorage/), [AddInData object](https://developers.geotab.com/myGeotab/apiReference/objects/AddInData/), dan [Developing Add-Ins](https://developers.geotab.com/myGeotab/addIns/developingAddIns/).

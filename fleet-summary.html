@@ -1,136 +1,628 @@
 <!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
   <meta charset="utf-8">
-  <title>Fleet Summary Dashboard</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Booking Kendaraan</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 0; padding: 16px; background: #f5f6f8; }
-    .cards { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
-    .card {
-      background: #fff; border-radius: 8px; padding: 16px 20px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1); flex: 1; min-width: 140px;
+    :root {
+      color-scheme: light;
+      font-family: Arial, sans-serif;
+      color: #202124;
+      background: #f5f6f8;
     }
-    .card h3 { margin: 0 0 6px; font-size: 13px; color: #666; font-weight: 500; }
-    .card .value { font-size: 28px; font-weight: bold; color: #1a73e8; }
-    .chart-box { background: #fff; border-radius: 8px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-    #status { color: #888; font-size: 13px; margin-bottom: 10px; }
+
+    * { box-sizing: border-box; }
+
+    body { margin: 0; padding: 24px; }
+    main { max-width: 1000px; margin: 0 auto; }
+    h1 { margin: 0 0 8px; font-size: 26px; }
+    h2 { margin: 0 0 16px; font-size: 18px; }
+    p { line-height: 1.5; }
+
+    .intro, .panel, .notice {
+      background: #fff;
+      border: 1px solid #e2e5e9;
+      border-radius: 8px;
+      padding: 18px;
+      margin-bottom: 16px;
+    }
+
+    .intro p { margin: 0; color: #5f6368; }
+    .notice { border-left: 4px solid #d99000; color: #5f4700; }
+    .notice[hidden] { display: none; }
+    #status { min-height: 24px; margin: 0 0 12px; }
+    #status[data-error="true"] { color: #b3261e; }
+    #status[data-error="false"] { color: #137333; }
+
+    form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    .field { display: flex; flex-direction: column; gap: 6px; }
+    .field-wide { grid-column: 1 / -1; }
+    label { font-size: 13px; font-weight: 600; }
+    input, select, button { font: inherit; }
+    input, select {
+      width: 100%;
+      min-height: 40px;
+      padding: 8px 10px;
+      border: 1px solid #b7bcc2;
+      border-radius: 4px;
+      background: #fff;
+    }
+
+    button {
+      min-height: 38px;
+      padding: 8px 14px;
+      border: 0;
+      border-radius: 4px;
+      background: #1769aa;
+      color: #fff;
+      cursor: pointer;
+    }
+
+    button:hover:not(:disabled) { background: #0e548c; }
+    button:disabled { cursor: not-allowed; opacity: .55; }
+    button.secondary { background: #5f6368; }
+    button.secondary:hover:not(:disabled) { background: #45494d; }
+    button.danger { background: #b3261e; }
+    button.danger:hover:not(:disabled) { background: #8c1d18; }
+    .form-actions { display: flex; align-items: center; gap: 8px; }
+
+    .booking-list { display: grid; gap: 10px; }
+    .booking {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 14px;
+      border: 1px solid #e2e5e9;
+      border-radius: 6px;
+    }
+    .booking-details { min-width: 0; }
+    .booking-title { margin: 0 0 5px; font-weight: 700; }
+    .booking-meta { margin: 0; color: #5f6368; font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; }
+    .booking-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+    .empty { color: #5f6368; }
+
+    .vehicle-inventory { margin: 0; padding-left: 20px; }
+    .vehicle-inventory li { margin: 4px 0; overflow-wrap: anywhere; }
+    code { font-size: 12px; }
+
+    @media (max-width: 640px) {
+      body { padding: 14px; }
+      form { grid-template-columns: 1fr; }
+      .field-wide { grid-column: auto; }
+      .booking { flex-direction: column; }
+    }
   </style>
 </head>
 <body>
+  <main>
+    <header class="intro">
+      <h1>Booking Kendaraan</h1>
+      <p>Buat, ubah, dan batalkan booking kendaraan. Data disimpan sebagai <code>AddInData</code> di database MyGeotab.</p>
+    </header>
 
-  <div id="status">Memuat data...</div>
+    <p id="status" role="status" aria-live="polite">Menunggu MyGeotab...</p>
 
-  <div class="cards">
-    <div class="card"><h3>Total Device</h3><div class="value" id="totalDevices">-</div></div>
-    <div class="card"><h3>Device Aktif</h3><div class="value" id="activeDevices">-</div></div>
-    <div class="card"><h3>Trip Hari Ini</h3><div class="value" id="tripsToday">-</div></div>
-  </div>
+    <aside id="concurrencyNotice" class="notice">
+      Pemeriksaan bentrok tidak atomik. Jika dua pengguna menyimpan slot yang sama pada saat bersamaan, booking ganda masih mungkin terjadi. Muat ulang data sebelum konfirmasi dan hubungi admin jika ada bentrok.
+    </aside>
 
-  <div class="chart-box">
-    <canvas id="tripChart" height="90"></canvas>
-  </div>
+    <section class="panel" aria-labelledby="formTitle">
+      <h2 id="formTitle">Buat booking</h2>
+      <form id="bookingForm">
+        <div class="field field-wide">
+          <label for="deviceId">Kendaraan</label>
+          <select id="deviceId" name="deviceId" required disabled>
+            <option value="">Memuat kendaraan...</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="startLocal">Mulai (waktu lokal)</label>
+          <input id="startLocal" name="startLocal" type="datetime-local" required disabled>
+        </div>
+        <div class="field">
+          <label for="endLocal">Selesai (waktu lokal)</label>
+          <input id="endLocal" name="endLocal" type="datetime-local" required disabled>
+        </div>
+        <div class="field field-wide">
+          <label for="purpose">Keperluan (opsional)</label>
+          <input id="purpose" name="purpose" type="text" maxlength="160" disabled>
+        </div>
+        <div class="field field-wide form-actions">
+          <button id="submitButton" type="submit" disabled>Buat booking</button>
+          <button id="cancelEditButton" class="secondary" type="button" hidden>Batalkan perubahan</button>
+        </div>
+      </form>
+    </section>
 
+    <section class="panel" aria-labelledby="bookingsTitle">
+      <h2 id="bookingsTitle">Daftar booking</h2>
+      <div id="bookingList" class="booking-list">
+        <p class="empty">Booking akan ditampilkan setelah data dimuat.</p>
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="vehicleSetupTitle">
+      <h2 id="vehicleSetupTitle">Kendaraan yang tersedia</h2>
+      <p>Untuk uji awal, konfigurasi dapat berisi satu <code>Device.id</code>. Tambahkan sampai lima ID kendaraan berbeda untuk penggunaan penuh. Daftar berikut membantu menemukan ID dari database ini.</p>
+      <ul id="vehicleInventory" class="vehicle-inventory">
+        <li>Memuat kendaraan...</li>
+      </ul>
+    </section>
+  </main>
+
+  <script src="booking-domain.js"></script>
   <script>
-    // Geotab akan memanggil fungsi ini saat Add-In dimuat.
-    // 'api' = objek untuk memanggil MyGeotab API, 'state' = info sesi/halaman.
-    geotab.addin.fleetSummaryDashboard = function () {
-      return {
-        initialize: function (api, state, callback) {
-          loadDashboard(api);
-          callback();
-        },
-        focus: function (api, state) {
-          // Dipanggil setiap kali user membuka menu Add-In ini
-          loadDashboard(api);
-        },
-        blur: function () {
-          // Dipanggil saat user pindah ke halaman lain
+    (function () {
+      'use strict';
+
+      var ADDIN_ID = 'azg3NWI4YTUtNDczZS00NzF';
+      var BOOKABLE_DEVICE_IDS = [
+        'W0LGT6ES0F1000000'
+      ];
+
+      var domain = window.VehicleBookingDomain;
+      var form = document.getElementById('bookingForm');
+      var deviceSelect = document.getElementById('deviceId');
+      var startInput = document.getElementById('startLocal');
+      var endInput = document.getElementById('endLocal');
+      var purposeInput = document.getElementById('purpose');
+      var submitButton = document.getElementById('submitButton');
+      var cancelEditButton = document.getElementById('cancelEditButton');
+      var statusElement = document.getElementById('status');
+      var bookingList = document.getElementById('bookingList');
+      var vehicleInventory = document.getElementById('vehicleInventory');
+      var currentApi = null;
+      var currentUserName = '';
+      var currentDevices = [];
+      var currentBookings = [];
+      var canBook = false;
+      var isBusy = false;
+      var editingRecordId = null;
+      var loadSequence = 0;
+      var listenersBound = false;
+
+      function apiCall(api, method, parameters) {
+        return new Promise(function (resolve, reject) {
+          api.call(method, parameters, resolve, reject);
+        });
+      }
+
+      function getSession(api) {
+        return new Promise(function (resolve, reject) {
+          try {
+            api.getSession(resolve);
+          } catch (error) {
+            reject(error);
+          }
+        });
+      }
+
+      function errorText(error) {
+        if (error && error.message) return error.message;
+        if (typeof error === 'string') return error;
+        try {
+          return JSON.stringify(error);
+        } catch (serializationError) {
+          return String(error);
         }
-      };
+      }
 
-      function loadDashboard(api) {
-        document.getElementById('status').innerText = 'Memuat data...';
+      function setStatus(message, isError) {
+        statusElement.textContent = message;
+        statusElement.setAttribute('data-error', isError ? 'true' : 'false');
+      }
 
-        // Ambil semua device
-        api.call('Get', { typeName: 'Device' }, function (devices) {
-          document.getElementById('totalDevices').innerText = devices.length;
+      function isDeviceConfigurationValid() {
+        return domain.isValidDeviceIdConfiguration(BOOKABLE_DEVICE_IDS);
+      }
 
-          var active = devices.filter(function (d) {
-            return !d.activeTo || new Date(d.activeTo) > new Date();
-          });
-          document.getElementById('activeDevices').innerText = active.length;
+      function formatLocalInput(date) {
+        function pad(value) { return String(value).padStart(2, '0'); }
+        return date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' +
+          pad(date.getDate()) + 'T' + pad(date.getHours()) + ':' + pad(date.getMinutes());
+      }
 
-        }, function (err) {
-          document.getElementById('status').innerText = 'Gagal memuat device: ' + err;
-        });
+      function setDefaultTimes() {
+        var start = new Date();
+        start.setMinutes(Math.ceil((start.getMinutes() + 1) / 30) * 30, 0, 0);
+        var end = new Date(start.getTime() + 60 * 60 * 1000);
+        startInput.value = formatLocalInput(start);
+        endInput.value = formatLocalInput(end);
+      }
 
-        // Ambil trip 7 hari terakhir
-        var today = new Date();
-        var fromDate = new Date();
-        fromDate.setDate(today.getDate() - 6);
+      function setBusy(value) {
+        isBusy = value;
+        updateFormState();
+      }
 
-        api.call('Get', {
-          typeName: 'Trip',
-          search: {
-            fromDate: fromDate.toISOString(),
-            toDate: today.toISOString()
-          }
-        }, function (trips) {
-          document.getElementById('status').innerText = '';
+      function updateFormState() {
+        var formEnabled = canBook && !isBusy;
+        deviceSelect.disabled = !formEnabled;
+        startInput.disabled = !formEnabled;
+        endInput.disabled = !formEnabled;
+        purposeInput.disabled = !formEnabled;
+        submitButton.disabled = !formEnabled;
+        cancelEditButton.disabled = isBusy;
+      }
 
-          // Hitung jumlah trip hari ini
-          var todayStr = today.toDateString();
-          var todayCount = trips.filter(function (t) {
-            return new Date(t.start).toDateString() === todayStr;
-          }).length;
-          document.getElementById('tripsToday').innerText = todayCount;
-
-          // Kelompokkan trip per hari untuk chart
-          var counts = {};
-          var labels = [];
-          for (var i = 6; i >= 0; i--) {
-            var d = new Date();
-            d.setDate(today.getDate() - i);
-            var key = d.toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric' });
-            labels.push(key);
-            counts[d.toDateString()] = 0;
-          }
-          trips.forEach(function (t) {
-            var key = new Date(t.start).toDateString();
-            if (counts.hasOwnProperty(key)) counts[key]++;
-          });
-          var data = Object.values(counts);
-
-          renderChart(labels, data);
-
-        }, function (err) {
-          document.getElementById('status').innerText = 'Gagal memuat trip: ' + err;
+      function getActiveDevices(devices) {
+        var now = Date.now();
+        return devices.filter(function (device) {
+          return !device.activeTo || new Date(device.activeTo).getTime() > now;
         });
       }
 
-      var chartInstance = null;
-      function renderChart(labels, data) {
-        var ctx = document.getElementById('tripChart').getContext('2d');
-        if (chartInstance) chartInstance.destroy();
-        chartInstance = new Chart(ctx, {
-          type: 'bar',
-          data: {
-            labels: labels,
-            datasets: [{
-              label: 'Jumlah Trip',
-              data: data,
-              backgroundColor: '#1a73e8'
-            }]
+      function renderDeviceInventory(devices) {
+        vehicleInventory.textContent = '';
+        if (devices.length === 0) {
+          var empty = document.createElement('li');
+          empty.textContent = 'Tidak ada kendaraan aktif yang dapat diakses.';
+          vehicleInventory.appendChild(empty);
+          return;
+        }
+
+        devices.forEach(function (device) {
+          var item = document.createElement('li');
+          item.textContent = (device.name || 'Kendaraan tanpa nama') + ' — ' + device.id;
+          vehicleInventory.appendChild(item);
+        });
+      }
+
+      function renderDeviceOptions(devices) {
+        var approvedIds = BOOKABLE_DEVICE_IDS;
+        var approvedDevices = devices.filter(function (device) {
+          return approvedIds.indexOf(device.id) !== -1;
+        });
+
+        deviceSelect.textContent = '';
+        var placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.textContent = approvedDevices.length ? 'Pilih kendaraan' : 'Tidak ada kendaraan terkonfigurasi';
+        deviceSelect.appendChild(placeholder);
+
+        approvedDevices.forEach(function (device) {
+          var option = document.createElement('option');
+          option.value = device.id;
+          option.textContent = device.name || device.id;
+          deviceSelect.appendChild(option);
+        });
+
+        var missingIds = approvedIds.filter(function (id) {
+          return id.indexOf('REPLACE_WITH_') === 0 || !devices.some(function (device) { return device.id === id; });
+        });
+        return {
+          approvedDevices: approvedDevices,
+          missingIds: missingIds
+        };
+      }
+
+      function getBookingRecords(api) {
+        return apiCall(api, 'Get', {
+          typeName: 'AddInData',
+          search: { addinId: ADDIN_ID }
+        });
+      }
+
+      function normalizeRecords(records) {
+        return records.map(function (record) {
+          var details = record.details;
+          if (typeof details === 'string') {
+            try {
+              details = JSON.parse(details);
+            } catch (error) {
+              throw new Error('Data booking AddInData tidak dapat dibaca untuk record ' + record.id + '.');
+            }
+          }
+          if (!details || typeof details !== 'object') {
+            throw new Error('Record AddInData ' + record.id + ' tidak memiliki details yang valid.');
+          }
+          return {
+            id: record.id,
+            groups: record.groups || [],
+            details: details
+          };
+        });
+      }
+
+      function formatDate(value) {
+        var date = new Date(value);
+        return Number.isNaN(date.getTime()) ? 'Waktu tidak valid' : date.toLocaleString();
+      }
+
+      function renderBookings() {
+        bookingList.textContent = '';
+        var sortedBookings = currentBookings.slice().sort(function (first, second) {
+          return new Date(first.details.startUtc).getTime() - new Date(second.details.startUtc).getTime();
+        });
+
+        if (sortedBookings.length === 0) {
+          var empty = document.createElement('p');
+          empty.className = 'empty';
+          empty.textContent = 'Belum ada booking.';
+          bookingList.appendChild(empty);
+          return;
+        }
+
+        sortedBookings.forEach(function (record) {
+          var details = record.details;
+          var device = currentDevices.find(function (item) { return item.id === details.deviceId; });
+          var card = document.createElement('article');
+          card.className = 'booking';
+
+          var content = document.createElement('div');
+          content.className = 'booking-details';
+          var title = document.createElement('p');
+          title.className = 'booking-title';
+          title.textContent = (device ? device.name : details.deviceName || details.deviceId) +
+            ' — ' + (details.status === 'cancelled' ? 'Dibatalkan' : 'Dikonfirmasi');
+          var metadata = document.createElement('p');
+          metadata.className = 'booking-meta';
+          metadata.textContent = formatDate(details.startUtc) + ' – ' + formatDate(details.endUtc) +
+            ' | Pemesan: ' + (details.createdBy || 'tidak diketahui') +
+            (details.purpose ? ' | Keperluan: ' + details.purpose : '');
+          content.appendChild(title);
+          content.appendChild(metadata);
+          card.appendChild(content);
+
+          var actions = document.createElement('div');
+          actions.className = 'booking-actions';
+          var isOwner = currentUserName &&
+            String(details.createdBy || '').toLowerCase() === currentUserName.toLowerCase();
+          if (details.status === 'confirmed' && isOwner) {
+            var editButton = document.createElement('button');
+            editButton.type = 'button';
+            editButton.className = 'secondary';
+            editButton.textContent = 'Ubah';
+            editButton.setAttribute('data-edit-id', record.id);
+            actions.appendChild(editButton);
+
+            var cancelButton = document.createElement('button');
+            cancelButton.type = 'button';
+            cancelButton.className = 'danger';
+            cancelButton.textContent = 'Batalkan';
+            cancelButton.setAttribute('data-cancel-id', record.id);
+            actions.appendChild(cancelButton);
+          }
+          if (actions.childNodes.length) card.appendChild(actions);
+          bookingList.appendChild(card);
+        });
+      }
+
+      async function refresh(api, quiet) {
+        currentApi = api;
+        var sequence = ++loadSequence;
+        if (!quiet) setStatus('Memuat kendaraan dan booking...', false);
+
+        try {
+          var results = await Promise.all([
+            apiCall(api, 'Get', { typeName: 'Device' }),
+            getBookingRecords(api),
+            getSession(api)
+          ]);
+          if (sequence !== loadSequence) return null;
+
+          currentDevices = getActiveDevices(results[0]);
+          currentBookings = normalizeRecords(results[1]);
+          currentUserName = results[2].userName || '';
+          renderDeviceInventory(currentDevices);
+          renderBookings();
+
+          var configuration = renderDeviceOptions(currentDevices);
+          canBook = isDeviceConfigurationValid() &&
+            configuration.approvedDevices.length === BOOKABLE_DEVICE_IDS.length &&
+            configuration.missingIds.length === 0;
+          updateFormState();
+
+          if (!isDeviceConfigurationValid()) {
+            setStatus('Konfigurasi belum valid: isi BOOKABLE_DEVICE_IDS dengan 1 sampai 5 Device.id berbeda yang disetujui.', true);
+          } else if (configuration.missingIds.length) {
+            setStatus('Satu atau lebih Device.id di BOOKABLE_DEVICE_IDS tidak ditemukan atau tidak aktif. Periksa daftar kendaraan di bawah.', true);
+          } else if (!quiet) {
+            setStatus('Data booking berhasil dimuat.', false);
+          }
+          return currentBookings.slice();
+        } catch (error) {
+          if (sequence === loadSequence) {
+            canBook = false;
+            updateFormState();
+            setStatus('Gagal memuat data MyGeotab: ' + errorText(error), true);
+          }
+          return null;
+        }
+      }
+
+      function createBookingKey() {
+        if (window.crypto && window.crypto.randomUUID) return window.crypto.randomUUID();
+        return Date.now().toString(36) + '-' + Math.random().toString(36).slice(2);
+      }
+
+      function resetForm() {
+        editingRecordId = null;
+        form.reset();
+        document.getElementById('formTitle').textContent = 'Buat booking';
+        submitButton.textContent = 'Buat booking';
+        cancelEditButton.hidden = true;
+        setDefaultTimes();
+        updateFormState();
+      }
+
+      function getRecordById(id) {
+        return currentBookings.find(function (record) { return String(record.id) === String(id); });
+      }
+
+      function beginEdit(id) {
+        var record = getRecordById(id);
+        if (!record || record.details.status !== 'confirmed') return;
+
+        editingRecordId = record.id;
+        deviceSelect.value = record.details.deviceId;
+        startInput.value = domain.toLocalDateTimeInput(record.details.startUtc);
+        endInput.value = domain.toLocalDateTimeInput(record.details.endUtc);
+        purposeInput.value = record.details.purpose || '';
+        document.getElementById('formTitle').textContent = 'Ubah booking';
+        submitButton.textContent = 'Simpan perubahan';
+        cancelEditButton.hidden = false;
+        window.scrollTo(0, 0);
+      }
+
+      async function submitBooking(event) {
+        event.preventDefault();
+        if (!canBook || isBusy) return;
+
+        setBusy(true);
+        try {
+          var interval = domain.toUtcInterval(startInput.value, endInput.value);
+          var device = currentDevices.find(function (item) { return item.id === deviceSelect.value; });
+          if (!device) throw new Error('Pilih kendaraan yang valid.');
+
+          var freshRecords = normalizeRecords(await getBookingRecords(currentApi));
+          var recordsForConflictCheck = freshRecords.filter(function (record) {
+            return String(record.id) !== String(editingRecordId);
+          });
+          if (domain.hasConflict(recordsForConflictCheck, device.id, interval.startUtc, interval.endUtc)) {
+            throw new Error('Kendaraan sudah memiliki booking aktif pada rentang waktu tersebut.');
+          }
+
+          var existingRecord = editingRecordId ? freshRecords.find(function (record) {
+            return String(record.id) === String(editingRecordId);
+          }) : null;
+          if (editingRecordId && (!existingRecord || existingRecord.details.status !== 'confirmed')) {
+            throw new Error('Booking tidak ditemukan atau sudah berubah. Muat ulang daftar.');
+          }
+          if (existingRecord &&
+              String(existingRecord.details.createdBy || '').toLowerCase() !== currentUserName.toLowerCase()) {
+            throw new Error('Hanya pembuat booking yang dapat mengubahnya.');
+          }
+          var now = new Date().toISOString();
+          var details = Object.assign({}, existingRecord ? existingRecord.details : {}, {
+            bookingKey: existingRecord ? existingRecord.details.bookingKey : createBookingKey(),
+            deviceId: device.id,
+            deviceName: device.name || device.id,
+            startUtc: interval.startUtc,
+            endUtc: interval.endUtc,
+            status: 'confirmed',
+            purpose: purposeInput.value.trim(),
+            createdBy: existingRecord ? existingRecord.details.createdBy : currentUserName,
+            createdAtUtc: existingRecord ? existingRecord.details.createdAtUtc : now,
+            updatedAtUtc: now
+          });
+
+          var recordId;
+          if (existingRecord) {
+            await apiCall(currentApi, 'Set', {
+              typeName: 'AddInData',
+              entity: {
+                addInId: ADDIN_ID,
+                id: existingRecord.id,
+                groups: existingRecord.groups,
+                details: details
+              }
+            });
+            recordId = existingRecord.id;
+          } else {
+            recordId = await apiCall(currentApi, 'Add', {
+              typeName: 'AddInData',
+              entity: { addInId: ADDIN_ID, details: details }
+            });
+          }
+
+          var updatedRecords = await refresh(currentApi, true);
+          resetForm();
+          if (!updatedRecords) {
+            setStatus('Booking tersimpan, tetapi daftar tidak dapat dimuat ulang. Muat ulang add-in untuk memverifikasi.', true);
+            return;
+          }
+
+          var concurrentConflict = domain.hasConflict(
+            updatedRecords.filter(function (record) { return String(record.id) !== String(recordId); }),
+            device.id,
+            interval.startUtc,
+            interval.endUtc
+          );
+          if (concurrentConflict) {
+            setStatus('Booking tersimpan, tetapi terdeteksi booking lain pada slot yang sama. Hubungi admin untuk menyelesaikan bentrok.', true);
+          } else {
+            setStatus(existingRecord ? 'Perubahan booking berhasil disimpan.' : 'Booking berhasil dibuat.', false);
+          }
+        } catch (error) {
+          setStatus('Booking tidak dapat disimpan: ' + errorText(error), true);
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      async function cancelBooking(id) {
+        if (isBusy || !window.confirm('Batalkan booking ini?')) return;
+        setBusy(true);
+        try {
+          var freshRecords = normalizeRecords(await getBookingRecords(currentApi));
+          var record = freshRecords.find(function (item) { return String(item.id) === String(id); });
+          if (!record || record.details.status !== 'confirmed') {
+            throw new Error('Booking tidak ditemukan atau sudah dibatalkan. Muat ulang daftar.');
+          }
+          if (String(record.details.createdBy || '').toLowerCase() !== currentUserName.toLowerCase()) {
+            throw new Error('Hanya pembuat booking yang dapat membatalkannya.');
+          }
+
+          var details = Object.assign({}, record.details, {
+            status: 'cancelled',
+            cancelledAtUtc: new Date().toISOString(),
+            updatedAtUtc: new Date().toISOString()
+          });
+          await apiCall(currentApi, 'Set', {
+            typeName: 'AddInData',
+            entity: {
+              addInId: ADDIN_ID,
+              id: record.id,
+              groups: record.groups,
+              details: details
+            }
+          });
+          var refreshedRecords = await refresh(currentApi, true);
+          if (String(editingRecordId) === String(id)) resetForm();
+          if (!refreshedRecords) {
+            setStatus('Booking dibatalkan, tetapi daftar tidak dapat dimuat ulang. Muat ulang add-in untuk memverifikasi.', true);
+            return;
+          }
+          setStatus('Booking berhasil dibatalkan.', false);
+        } catch (error) {
+          setStatus('Booking tidak dapat dibatalkan: ' + errorText(error), true);
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      function bindListeners() {
+        if (listenersBound) return;
+        form.addEventListener('submit', submitBooking);
+        cancelEditButton.addEventListener('click', resetForm);
+        bookingList.addEventListener('click', function (event) {
+          var editButton = event.target.closest('[data-edit-id]');
+          var cancelButton = event.target.closest('[data-cancel-id]');
+          if (editButton) beginEdit(editButton.getAttribute('data-edit-id'));
+          if (cancelButton) cancelBooking(cancelButton.getAttribute('data-cancel-id'));
+        });
+        setDefaultTimes();
+        listenersBound = true;
+      }
+
+      geotab.addin.fleetSummaryDashboard = function () {
+        return {
+          initialize: function (api, state, callback) {
+            bindListeners();
+            refresh(api, false).then(function () {
+              callback();
+            });
           },
-          options: {
-            responsive: true,
-            plugins: { legend: { display: false } },
-            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
-          }
-        });
-      }
-    };
+          focus: function (api) {
+            refresh(api, false);
+          },
+          blur: function () {}
+        };
+      };
+    })();
   </script>
 </body>
 </html>
