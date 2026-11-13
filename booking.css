@@ -74,18 +74,14 @@ body {
 }
 
 .app-shell {
-  display: grid;
-  grid-template-columns: 196px minmax(0, 1fr);
-  gap: 18px;
-  align-items: start;
+  min-width: 0;
 }
 
 .side-nav {
-  position: sticky;
-  top: 16px;
   display: grid;
-  gap: 5px;
-  padding: 14px;
+  gap: 8px;
+  padding: 12px 14px;
+  margin-bottom: 18px;
   background: #fff;
   border: 1px solid #e3e9ef;
   border-radius: 12px;
@@ -93,15 +89,22 @@ body {
 }
 
 .side-nav .eyebrow {
-  margin: 2px 8px 7px;
+  margin: 0 6px;
+}
+
+.nav-items {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 5px;
 }
 
 .nav-item {
   min-height: 42px;
-  padding: 9px 11px;
+  padding: 9px 12px;
   color: #536579;
   background: transparent;
-  text-align: left;
+  text-align: center;
+  white-space: nowrap;
 }
 
 .nav-item:hover:not(:disabled) {
@@ -141,6 +144,58 @@ body {
   color: #637386;
   font-size: 13px;
   line-height: 1.55;
+}
+
+.users-toolbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.users-toolbar .eyebrow {
+  margin: 0 0 5px;
+}
+
+.users-toolbar .page-description {
+  max-width: 720px;
+}
+
+.users-filters {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(180px, 1fr);
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.users-table {
+  min-width: 800px;
+}
+
+.user-status {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.user-status-active {
+  color: #23603a;
+  background: #edf8f0;
+}
+
+.user-status-scheduled {
+  color: #27537c;
+  background: #eaf3fb;
+}
+
+.user-status-inactive,
+.user-status-unknown {
+  color: #536579;
+  background: #edf2f7;
 }
 
 .status {
@@ -573,24 +628,7 @@ code {
   }
 
   .app-shell {
-    grid-template-columns: 1fr;
-    gap: 14px;
-  }
-
-  .side-nav {
-    position: static;
-    display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-  }
-
-  .side-nav .eyebrow {
-    grid-column: 1 / -1;
-  }
-
-  .nav-item {
-    min-width: 0;
-    padding: 9px 6px;
-    text-align: center;
+    display: block;
   }
 
   .booking-layout {
@@ -638,13 +676,35 @@ code {
     grid-template-columns: 1fr;
   }
 
+  .users-filters {
+    grid-template-columns: 1fr;
+  }
+
   .report-filter-actions,
   .filter-message {
     grid-column: auto;
   }
 
   .side-nav {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 10px;
+  }
+
+  .nav-items {
+    display: flex;
+    overflow-x: auto;
+  }
+
+  .nav-item {
+    flex: 0 0 auto;
+    min-width: 102px;
+  }
+
+  .users-toolbar {
+    flex-direction: column;
+  }
+
+  .users-toolbar button {
+    width: 100%;
   }
 
   .report-history-heading,

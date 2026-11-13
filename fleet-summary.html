@@ -20,11 +20,13 @@
     <div class="app-shell">
       <nav class="side-nav" aria-label="Add-in navigation">
         <p class="eyebrow">MAIN MENU</p>
-        <button class="nav-item" type="button" data-page="booking" aria-current="page">Booking</button>
-        <button class="nav-item" type="button" data-page="approval">Approval</button>
-        <button class="nav-item" type="button" data-page="users">Users</button>
-        <button class="nav-item" type="button" data-page="reports">Reports</button>
-        <button class="nav-item" type="button" data-page="vehicles">Vehicles</button>
+        <div class="nav-items">
+          <button class="nav-item" type="button" data-page="booking" aria-current="page">Booking</button>
+          <button class="nav-item" type="button" data-page="approval">Approval</button>
+          <button class="nav-item" type="button" data-page="users">Users</button>
+          <button class="nav-item" type="button" data-page="reports">Reports</button>
+          <button class="nav-item" type="button" data-page="vehicles">Vehicles</button>
+        </div>
       </nav>
 
       <div class="page-content">
@@ -115,34 +117,55 @@
             <div>
               <p class="eyebrow">ACCESS</p>
               <h2 id="usersPageTitle">Users</h2>
-              <p class="page-description">View users and the roles assigned to their accounts.</p>
+              <p class="page-description">Browse user accounts and access groups visible in the current database.</p>
             </div>
           </div>
           <section class="panel" aria-labelledby="usersTableTitle">
-            <div class="section-heading">
+            <div class="users-toolbar">
               <div>
                 <p class="eyebrow">DIRECTORY</p>
                 <h3 id="usersTableTitle">All users</h3>
+                <p class="page-description">Only records visible to the current MyGeotab session are shown. Some MyAdmin accounts may not be visible to BasicAuthentication users.</p>
+              </div>
+              <button id="refreshUsersButton" class="secondary" type="button">Refresh users</button>
+            </div>
+            <div id="userDataStatus" class="status user-data-status" role="status" aria-live="polite">Select this tab to load users from the current database.</div>
+            <div class="users-filters">
+              <div class="field">
+                <label for="userSearch">Search users</label>
+                <input id="userSearch" type="search" placeholder="Name, email, role, or security group">
+              </div>
+              <div class="field">
+                <label for="userStatusFilter">Account status</label>
+                <select id="userStatusFilter">
+                  <option value="all">All statuses</option>
+                  <option value="active">Active</option>
+                  <option value="scheduled">Scheduled</option>
+                  <option value="inactive">Inactive</option>
+                  <option value="unknown">Unknown</option>
+                </select>
               </div>
             </div>
             <div class="table-wrap">
-              <table class="data-table">
+              <table class="data-table users-table">
                 <thead>
                   <tr>
                     <th scope="col">Name</th>
-                    <th scope="col">Email</th>
-                    <th scope="col">Role</th>
-                    <th scope="col">Status</th>
+                    <th scope="col">Email / login</th>
+                    <th scope="col">User role</th>
+                    <th scope="col">Security groups</th>
+                    <th scope="col">Driver</th>
+                    <th scope="col">Account status</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody id="userListBody">
                   <tr>
-                    <td colspan="4"><p class="empty table-empty">User data has not been loaded.</p></td>
+                    <td colspan="5"><p class="empty table-empty">User data has not been loaded.</p></td>
                   </tr>
                 </tbody>
               </table>
             </div>
-            <p class="table-note">User records and roles will appear once user data integration is defined.</p>
+            <p class="table-note">Account status is derived from each user's active-from and active-to dates. It does not guarantee that the user can authenticate successfully.</p>
           </section>
         </section>
 
@@ -310,6 +333,11 @@
       var reportPageSummary = document.getElementById('reportPageSummary');
       var reportPreviousPage = document.getElementById('reportPreviousPage');
       var reportNextPage = document.getElementById('reportNextPage');
+      var userDataStatus = document.getElementById('userDataStatus');
+      var refreshUsersButton = document.getElementById('refreshUsersButton');
+      var userSearch = document.getElementById('userSearch');
+      var userStatusFilter = document.getElementById('userStatusFilter');
+      var userListBody = document.getElementById('userListBody');
       var reportPage = 0;
       var reportPageSize = 25;
       var appliedReportFilters = {
@@ -323,6 +351,10 @@
       var currentUserName = '';
       var currentDevices = [];
       var currentBookings = [];
+      var currentUsers = [];
+      var usersLoadState = 'idle';
+      var usersLoadSequence = 0;
+      var activePage = 'booking';
       var canBook = false;
       var isBusy = false;
       var editingRecordId = null;
@@ -637,6 +669,151 @@
         renderReports();
       }
 
+      function getUserFullName(user) {
+        var fullName = [user.firstName, user.lastName].filter(Boolean).join(' ').trim();
+        return fullName || user.login || 'Unnamed user';
+      }
+
+      function getUserRoleLabel(user) {
+        var role = user.userRole;
+        if (!role) return '—';
+        if (typeof role === 'string' || typeof role === 'number') return String(role);
+        return String(role.name || role.id || '—');
+      }
+
+      function getUserStatus(user) {
+        var activeFrom = Date.parse(user.activeFrom);
+        var activeTo = Date.parse(user.activeTo);
+        if (!Number.isFinite(activeFrom) || !Number.isFinite(activeTo)) return 'Unknown';
+        if (Date.now() < activeFrom) return 'Scheduled';
+        if (Date.now() > activeTo) return 'Inactive';
+        return 'Active';
+      }
+
+      function getUserEmptyRow(message) {
+        var row = document.createElement('tr');
+        var cell = document.createElement('td');
+        cell.colSpan = 6;
+        var empty = document.createElement('p');
+        empty.className = 'empty table-empty';
+        empty.textContent = message;
+        cell.appendChild(empty);
+        row.appendChild(cell);
+        return row;
+      }
+
+      function renderUsers() {
+        userListBody.textContent = '';
+        if (usersLoadState === 'idle' || usersLoadState === 'loading') {
+          userListBody.appendChild(getUserEmptyRow(
+            usersLoadState === 'loading' ? 'Loading users...' : 'Select the Users tab to load user records.'
+          ));
+          return;
+        }
+        if (usersLoadState === 'error') {
+          userListBody.appendChild(getUserEmptyRow('The user list could not be loaded.'));
+          return;
+        }
+
+        var search = userSearch.value.trim().toLowerCase();
+        var statusFilter = userStatusFilter.value;
+        var users = currentUsers.filter(function (user) {
+          var groups = user.securityGroups.join(' ');
+          var searchable = [
+            getUserFullName(user),
+            user.login,
+            getUserRoleLabel(user),
+            groups
+          ].join(' ').toLowerCase();
+          return (!search || searchable.indexOf(search) !== -1) &&
+            (statusFilter === 'all' || getUserStatus(user).toLowerCase() === statusFilter);
+        }).sort(function (first, second) {
+          return getUserFullName(first).localeCompare(getUserFullName(second));
+        });
+
+        if (users.length === 0) {
+          userListBody.appendChild(getUserEmptyRow(
+            currentUsers.length ? 'No users match the selected filters.' : 'No user records are visible to this account.'
+          ));
+          return;
+        }
+
+        users.forEach(function (user) {
+          var row = document.createElement('tr');
+          [
+            getUserFullName(user),
+            user.login || '—',
+            getUserRoleLabel(user),
+            user.securityGroups.length ? user.securityGroups.join(', ') : '—',
+            user.isDriver ? 'Yes' : 'No'
+          ].forEach(function (value) {
+            var cell = document.createElement('td');
+            cell.textContent = value;
+            row.appendChild(cell);
+          });
+          var statusCell = document.createElement('td');
+          var status = getUserStatus(user);
+          var statusBadge = document.createElement('span');
+          statusBadge.className = 'user-status user-status-' + status.toLowerCase();
+          statusBadge.textContent = status;
+          statusCell.appendChild(statusBadge);
+          row.appendChild(statusCell);
+          userListBody.appendChild(row);
+        });
+      }
+
+      async function loadUsers(api, force) {
+        if (!api || usersLoadState === 'loading' || (usersLoadState === 'loaded' && !force)) return;
+        var sequence = ++usersLoadSequence;
+        usersLoadState = 'loading';
+        currentUsers = [];
+        refreshUsersButton.disabled = true;
+        userDataStatus.textContent = 'Loading users from the current database...';
+        userDataStatus.setAttribute('data-error', 'false');
+        renderUsers();
+
+        try {
+          var users = await apiCall(api, 'Get', { typeName: 'User' });
+          if (sequence !== usersLoadSequence) return;
+          currentUsers = users.filter(function (user) {
+            return user && user.id;
+          }).map(function (user) {
+            return {
+              id: user.id,
+              login: String(user.name || ''),
+              firstName: String(user.firstName || ''),
+              lastName: String(user.lastName || ''),
+              userRole: user.userRole || null,
+              securityGroups: Array.isArray(user.securityGroups)
+                ? user.securityGroups.map(function (group) {
+                  if (typeof group === 'string') return group;
+                  return group && (group.name || group.id) ? String(group.name || group.id) : '';
+                }).filter(Boolean)
+                : [],
+              activeFrom: user.activeFrom || '',
+              activeTo: user.activeTo || '',
+              isDriver: user.isDriver === true
+            };
+          });
+          usersLoadState = 'loaded';
+          userDataStatus.textContent = currentUsers.length
+            ? 'Loaded ' + currentUsers.length + ' user records visible to this account.'
+            : 'No user records are visible to this account.';
+          userDataStatus.setAttribute('data-error', 'false');
+          renderUsers();
+        } catch (error) {
+          if (sequence === usersLoadSequence) {
+            currentUsers = [];
+            usersLoadState = 'error';
+            userDataStatus.textContent = 'Unable to load users. Check User read access for this account. Details: ' + errorText(error);
+            userDataStatus.setAttribute('data-error', 'true');
+            renderUsers();
+          }
+        } finally {
+          if (sequence === usersLoadSequence) refreshUsersButton.disabled = false;
+        }
+      }
+
       function renderBookings() {
         bookingList.textContent = '';
         var sortedBookings = currentBookings.slice().sort(function (first, second) {
@@ -919,10 +1096,16 @@
           reportPage += 1;
           renderReports();
         });
+        refreshUsersButton.addEventListener('click', function () {
+          loadUsers(currentApi, true);
+        });
+        userSearch.addEventListener('input', renderUsers);
+        userStatusFilter.addEventListener('change', renderUsers);
         navigation.addEventListener('click', function (event) {
           var button = event.target.closest('[data-page]');
           if (!button) return;
           var pageId = 'page-' + button.getAttribute('data-page');
+          activePage = button.getAttribute('data-page');
           document.querySelectorAll('.page-view').forEach(function (page) {
             page.hidden = page.id !== pageId;
           });
@@ -930,6 +1113,7 @@
             if (item === button) item.setAttribute('aria-current', 'page');
             else item.removeAttribute('aria-current');
           });
+          if (activePage === 'users') loadUsers(currentApi, false);
         });
         bookingList.addEventListener('click', function (event) {
           var editButton = event.target.closest('[data-edit-id]');
@@ -951,6 +1135,7 @@
           },
           focus: function (api) {
             refresh(api, false);
+            if (activePage === 'users') loadUsers(api, true);
           },
           blur: function () {}
         };
