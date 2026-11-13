@@ -19,7 +19,7 @@ A lightweight, browser-hosted MyGeotab custom page add-in for booking shared fle
 | **Booking** | Create and manage bookings. Only the booking owner can edit or cancel a booking. |
 | **Vehicles** | View the vehicles available to the current account, including inactive vehicles. |
 | **Approval** | Visual placeholder; no approval actions or workflow are connected. |
-| **Users** | Read-only list of user records visible to the current MyGeotab session, with search, account status, user role, security groups, and driver flag. |
+| **Users** | Read-only list of user records visible to the current MyGeotab session, with search, account status, functional role, driver status, and Clearance names resolved from each user's assigned security-group IDs. Unmapped groups are identified rather than guessed. |
 | **Reports** | Read-only booking history with date-range, vehicle, status, and requester filters; summary counts and pagination. Date filters include bookings that overlap any part of the selected range. |
 
 ## Setup
@@ -37,6 +37,7 @@ A lightweight, browser-hosted MyGeotab custom page add-in for booking shared fle
 - Reports include both confirmed and cancelled records. Date-range filtering uses the booking period, not the record creation time.
 - Report filtering and pagination run in the browser over the booking records returned by MyGeotab; pagination does not limit the records fetched from the API.
 - The Users tab shows only user records visible to the current session. MyAdmin accounts may not be visible to BasicAuthentication users; account status is derived from `activeFrom` and `activeTo` and does not guarantee successful authentication.
+- MyGeotab functional role is optional and may be unassigned. The Users table resolves Clearance names by matching each user's `securityGroups` IDs with MyGeotab Group records. A group that cannot be resolved is shown as `Unmapped clearance`; a failed Group lookup is shown as `Not available`. Clearance and driver status do not assign booking approval permissions. Approval roles and workflow are not configured.
 - Conflict checking runs in the client before saving and is not atomic. Two users can still create overlapping bookings at the same time. The add-in checks again after saving and warns if a conflict is detected. Workflows that require a strict guarantee need a transactional backend.
 
 ## Development

@@ -117,7 +117,7 @@
             <div>
               <p class="eyebrow">ACCESS</p>
               <h2 id="usersPageTitle">Users</h2>
-              <p class="page-description">Browse user accounts and access groups visible in the current database.</p>
+              <p class="page-description">Browse user accounts and MyGeotab clearance information available from the current database.</p>
             </div>
           </div>
           <section class="panel" aria-labelledby="usersTableTitle">
@@ -133,7 +133,7 @@
             <div class="users-filters">
               <div class="field">
                 <label for="userSearch">Search users</label>
-                <input id="userSearch" type="search" placeholder="Name, email, role, or security group">
+                <input id="userSearch" type="search" placeholder="Name, email, functional role, clearance, or driver">
               </div>
               <div class="field">
                 <label for="userStatusFilter">Account status</label>
@@ -152,19 +152,20 @@
                   <tr>
                     <th scope="col">Name</th>
                     <th scope="col">Email / login</th>
-                    <th scope="col">User role</th>
-                    <th scope="col">Security groups</th>
-                    <th scope="col">Driver</th>
+                    <th scope="col">Functional role</th>
+                    <th scope="col">Clearance</th>
+                    <th scope="col">Driver status</th>
                     <th scope="col">Account status</th>
                   </tr>
                 </thead>
                 <tbody id="userListBody">
                   <tr>
-                    <td colspan="5"><p class="empty table-empty">User data has not been loaded.</p></td>
+                    <td colspan="6"><p class="empty table-empty">User data has not been loaded.</p></td>
                   </tr>
                 </tbody>
               </table>
             </div>
+            <p class="table-note">Functional role is optional. Clearance is resolved from the names of the security groups assigned to each user. Custom or unavailable groups are marked separately; clearance does not assign booking approval permissions.</p>
             <p class="table-note">Account status is derived from each user's active-from and active-to dates. It does not guarantee that the user can authenticate successfully.</p>
           </section>
         </section>
@@ -352,6 +353,8 @@
       var currentDevices = [];
       var currentBookings = [];
       var currentUsers = [];
+      var securityGroupNames = {};
+      var securityGroupsLoaded = false;
       var usersLoadState = 'idle';
       var usersLoadSequence = 0;
       var activePage = 'booking';
@@ -676,9 +679,29 @@
 
       function getUserRoleLabel(user) {
         var role = user.userRole;
-        if (!role) return '—';
-        if (typeof role === 'string' || typeof role === 'number') return String(role);
-        return String(role.name || role.id || '—');
+        if (!role) return 'Not assigned';
+        var roleLabel = typeof role === 'string' || typeof role === 'number'
+          ? String(role)
+          : String(role.name || role.id || 'Not assigned');
+        roleLabel = roleLabel.trim();
+        if (roleLabel.toLowerCase() === 'other' && user.customUserRole) {
+          return 'Other: ' + user.customUserRole.trim();
+        }
+        return roleLabel;
+      }
+
+      function getUserDriverLabel(user) {
+        return user.isDriver ? 'Driver' : 'Not a driver';
+      }
+
+      function getUserClearanceLabel(user) {
+        var groups = Array.isArray(user.securityGroups) ? user.securityGroups : [];
+        var names = groups.map(function (group) {
+          var id = typeof group === 'string' ? group : group && group.id;
+          return id ? securityGroupNames[id] || '' : '';
+        }).filter(Boolean);
+        if (names.length) return names.join(', ');
+        return groups.length && securityGroupsLoaded ? 'Unmapped clearance' : 'Not available';
       }
 
       function getUserStatus(user) {
@@ -718,12 +741,13 @@
         var search = userSearch.value.trim().toLowerCase();
         var statusFilter = userStatusFilter.value;
         var users = currentUsers.filter(function (user) {
-          var groups = user.securityGroups.join(' ');
           var searchable = [
             getUserFullName(user),
             user.login,
             getUserRoleLabel(user),
-            groups
+            user.customUserRole,
+            getUserClearanceLabel(user),
+            user.isDriver ? 'Driver' : ''
           ].join(' ').toLowerCase();
           return (!search || searchable.indexOf(search) !== -1) &&
             (statusFilter === 'all' || getUserStatus(user).toLowerCase() === statusFilter);
@@ -744,8 +768,8 @@
             getUserFullName(user),
             user.login || '—',
             getUserRoleLabel(user),
-            user.securityGroups.length ? user.securityGroups.join(', ') : '—',
-            user.isDriver ? 'Yes' : 'No'
+            getUserClearanceLabel(user),
+            getUserDriverLabel(user)
           ].forEach(function (value) {
             var cell = document.createElement('td');
             cell.textContent = value;
@@ -767,15 +791,27 @@
         var sequence = ++usersLoadSequence;
         usersLoadState = 'loading';
         currentUsers = [];
+        securityGroupNames = {};
+        securityGroupsLoaded = false;
         refreshUsersButton.disabled = true;
         userDataStatus.textContent = 'Loading users from the current database...';
         userDataStatus.setAttribute('data-error', 'false');
         renderUsers();
 
         try {
-          var users = await apiCall(api, 'Get', { typeName: 'User' });
+          var results = await Promise.all([
+            apiCall(api, 'Get', { typeName: 'User' }),
+            apiCall(api, 'Get', { typeName: 'Group' }).catch(function () { return null; })
+          ]);
           if (sequence !== usersLoadSequence) return;
-          currentUsers = users.filter(function (user) {
+          securityGroupNames = {};
+          securityGroupsLoaded = Array.isArray(results[1]);
+          if (securityGroupsLoaded) {
+            results[1].forEach(function (group) {
+              if (group && group.id && group.name) securityGroupNames[group.id] = String(group.name);
+            });
+          }
+          currentUsers = results[0].filter(function (user) {
             return user && user.id;
           }).map(function (user) {
             return {
@@ -784,12 +820,8 @@
               firstName: String(user.firstName || ''),
               lastName: String(user.lastName || ''),
               userRole: user.userRole || null,
-              securityGroups: Array.isArray(user.securityGroups)
-                ? user.securityGroups.map(function (group) {
-                  if (typeof group === 'string') return group;
-                  return group && (group.name || group.id) ? String(group.name || group.id) : '';
-                }).filter(Boolean)
-                : [],
+              customUserRole: String(user.customUserRole || '').trim(),
+              securityGroups: Array.isArray(user.securityGroups) ? user.securityGroups.slice() : [],
               activeFrom: user.activeFrom || '',
               activeTo: user.activeTo || '',
               isDriver: user.isDriver === true
