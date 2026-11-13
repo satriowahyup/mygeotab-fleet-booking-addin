@@ -117,7 +117,7 @@
             <div>
               <p class="eyebrow">ACCESS</p>
               <h2 id="usersPageTitle">Users</h2>
-              <p class="page-description">Browse user accounts and MyGeotab clearance information available from the current database.</p>
+              <p class="page-description">Browse user accounts and MyGeotab security clearances available from the current database.</p>
             </div>
           </div>
           <section class="panel" aria-labelledby="usersTableTitle">
@@ -801,7 +801,10 @@
         try {
           var results = await Promise.all([
             apiCall(api, 'Get', { typeName: 'User' }),
-            apiCall(api, 'Get', { typeName: 'Group' }).catch(function () { return null; })
+            apiCall(api, 'Get', {
+              typeName: 'Group',
+              search: { id: 'GroupSecurityId' }
+            }).catch(function () { return null; })
           ]);
           if (sequence !== usersLoadSequence) return;
           securityGroupNames = {};
