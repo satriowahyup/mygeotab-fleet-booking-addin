@@ -695,10 +695,20 @@
       }
 
       function getUserClearanceLabel(user) {
+        var builtInClearanceNames = {
+          everythingsecurity: 'Administrator',
+          supervisorsecurity: 'Supervisor',
+          defaultsecurity: 'Default user',
+          driveusersecurity: 'Drive App user',
+          viewonlysecurity: 'View only',
+          nothingsecurity: 'Nothing'
+        };
         var groups = Array.isArray(user.securityGroups) ? user.securityGroups : [];
         var names = groups.map(function (group) {
           var id = typeof group === 'string' ? group : group && group.id;
-          return id ? securityGroupNames[id] || '' : '';
+          var name = id ? securityGroupNames[id] || '' : '';
+          var normalizedName = name.toLowerCase().replace(/[^a-z]/g, '');
+          return builtInClearanceNames[normalizedName] || name;
         }).filter(Boolean);
         if (names.length) return names.join(', ');
         return groups.length && securityGroupsLoaded ? 'Unmapped clearance' : 'Not available';
