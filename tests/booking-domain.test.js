@@ -46,6 +46,104 @@ test('converts local form values to valid UTC intervals and rejects invalid inte
 
   assert.equal(interval.startUtc, new Date(start).toISOString());
   assert.equal(interval.endUtc, new Date(end).toISOString());
-  assert.throws(() => domain.toUtcInterval(end, start), /harus setelah/);
-  assert.throws(() => domain.toUtcInterval('', end), /wajib diisi/);
+  assert.throws(() => domain.toUtcInterval(end, start), /must be after/);
+  assert.throws(() => domain.toUtcInterval('', end), /required/);
+});
+
+test('filters history to bookings that overlap the selected local date range', () => {
+  const startOfDay = new Date('2026-11-12T00:00:00');
+  const nextDay = new Date('2026-11-13T00:00:00');
+  const bookings = [
+    {
+      id: 'overlapping',
+      details: {
+        startUtc: new Date(startOfDay.getTime() - 60 * 60 * 1000).toISOString(),
+        endUtc: new Date(startOfDay.getTime() + 60 * 60 * 1000).toISOString(),
+        status: 'cancelled'
+      }
+    },
+    {
+      id: 'inside',
+      details: {
+        startUtc: new Date(startOfDay.getTime() + 2 * 60 * 60 * 1000).toISOString(),
+        endUtc: new Date(startOfDay.getTime() + 3 * 60 * 60 * 1000).toISOString(),
+        status: 'confirmed'
+      }
+    },
+    {
+      id: 'ends-at-start',
+      details: {
+        startUtc: new Date(startOfDay.getTime() - 2 * 60 * 60 * 1000).toISOString(),
+        endUtc: startOfDay.toISOString(),
+        status: 'confirmed'
+      }
+    },
+    {
+      id: 'starts-after-range',
+      details: {
+        startUtc: nextDay.toISOString(),
+        endUtc: new Date(nextDay.getTime() + 60 * 60 * 1000).toISOString(),
+        status: 'confirmed'
+      }
+    }
+  ];
+
+  const filtered = domain.filterBookings(bookings, {
+    fromDate: '2026-11-12',
+    toDate: '2026-11-12'
+  });
+
+  assert.deepEqual(filtered.map((booking) => booking.id), ['overlapping', 'inside']);
+});
+
+test('filters booking history by vehicle, status, and requester', () => {
+  const bookings = [
+    {
+      id: 'matching',
+      details: {
+        deviceId: 'vehicle-1',
+        status: 'confirmed',
+        createdBy: 'Alice Smith'
+      }
+    },
+    {
+      id: 'wrong-status',
+      details: {
+        deviceId: 'vehicle-1',
+        status: 'cancelled',
+        createdBy: 'Alice Smith'
+      }
+    },
+    {
+      id: 'wrong-requester',
+      details: {
+        deviceId: 'vehicle-1',
+        status: 'confirmed',
+        createdBy: 'Bob Jones'
+      }
+    },
+    {
+      id: 'wrong-vehicle',
+      details: {
+        deviceId: 'vehicle-2',
+        status: 'confirmed',
+        createdBy: 'Alice Smith'
+      }
+    }
+  ];
+
+  const filtered = domain.filterBookings(bookings, {
+    deviceId: 'vehicle-1',
+    status: 'confirmed',
+    requester: 'alice'
+  });
+
+  assert.deepEqual(filtered.map((booking) => booking.id), ['matching']);
+});
+
+test('rejects a report date range whose end precedes its start', () => {
+  assert.throws(() => domain.filterBookings([], {
+    fromDate: '2026-11-13',
+    toDate: '2026-11-12'
+  }), /on or after/);
 });

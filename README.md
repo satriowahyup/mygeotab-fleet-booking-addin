@@ -1,28 +1,61 @@
-# MyGeotab vehicle booking add-in
+# MyGeotab Fleet Booking Add-in
 
-Custom page add-in untuk membuat, melihat, mengubah, dan membatalkan booking kendaraan. Record booking disimpan sebagai `AddInData` di database MyGeotab; tidak ada database eksternal.
+A lightweight, browser-hosted MyGeotab custom page add-in for booking shared fleet vehicles. Booking records are stored in MyGeotab as `AddInData`; no external database is required.
 
-## Konfigurasi sebelum digunakan
+## Features
 
-1. Daftar kendaraan diambil dengan `Get Device` setiap add-in dibuka. Semua kendaraan yang dapat diakses akun saat itu ditampilkan; kendaraan aktif dapat dipilih, sedangkan kendaraan nonaktif ditampilkan tetapi tidak bisa dibooking. Pastikan hak akses MyGeotab pengguna sesuai.
-2. `ADDIN_ID` harus tetap sama untuk semua versi add-in ini pada database MyGeotab yang sama. Jangan membuat ID baru setiap sesi. Jika membuat add-in lain di database yang sama, buat ID unik baru menggunakan [Geotab Storage API instructions](https://developers.geotab.com/myGeotab/addIns/addInStorage/).
-3. Host `fleet-summary.html`, `booking-domain.js`, dan `booking.css` bersama-sama pada HTTPS. Semua asset dimuat melalui URL relatif, jadi ketiganya harus tetap dalam folder yang sama.
-4. Pastikan URL di `configuration.json` menunjuk ke file `fleet-summary.html` yang sudah di-host dan isi `supportEmail`, lalu tambahkan JSON konfigurasi itu di **Administration > System > System Settings > Add-Ins**.
-5. Berikan clearance MyGeotab yang mengizinkan pengguna membaca daftar `Device` serta membaca dan menulis `AddInData`. Add-in menampilkan tombol ubah/batal hanya untuk pembuat booking. Pengguna `ViewOnly` tidak dapat membuat atau mengubah booking.
+- Create, view, edit, and cancel vehicle bookings.
+- Browse the vehicles available to the signed-in MyGeotab account.
+- Check for overlapping bookings before saving.
+- Review booking history with date-range, vehicle, status, and requester filters.
+- Use a responsive dashboard with **Booking**, **Approval**, **Users**, **Reports**, and **Vehicles** sections.
 
-## Perilaku booking
+> **Current scope:** Booking, vehicle inventory, and report history use MyGeotab data. Approval and Users are UI shells only; no approval workflow or user directory is connected.
 
-- Waktu diinput dalam zona waktu browser, lalu disimpan sebagai ISO-8601 UTC.
-- Booking aktif untuk kendaraan yang sama ditolak jika interval waktu bertumpang tindih. Interval yang bersisian, misalnya booking kedua mulai tepat saat booking pertama selesai, diperbolehkan.
-- Pembatalan mengubah status menjadi `cancelled`; record tidak dihapus.
-- Pemeriksaan bentrok di klien bukan transaksi atomik. Dua pengguna dapat menyimpan booking bertumpang tindih secara bersamaan. Halaman memeriksa ulang setelah menyimpan dan memberi peringatan jika bentrok terdeteksi; bisnis yang memerlukan jaminan keras perlu backend transaksional.
+## Dashboard
 
-## Pengembangan dan pengujian
+| Section | Current behavior |
+| --- | --- |
+| **Booking** | Create and manage bookings. Only the booking owner can edit or cancel a booking. |
+| **Vehicles** | View the vehicles available to the current account, including inactive vehicles. |
+| **Approval** | Visual placeholder; no approval actions or workflow are connected. |
+| **Users** | Visual placeholder for a future user and role directory. |
+| **Reports** | Read-only booking history with date-range, vehicle, status, and requester filters; summary counts and pagination. Date filters include bookings that overlap any part of the selected range. |
 
-Logika validasi waktu dan bentrok berada di `booking-domain.js`. Jalankan tes dengan:
+## Setup
+
+1. **Keep the add-in ID stable.** `ADDIN_ID` in `fleet-summary.html` must remain unchanged across deployments to the same MyGeotab database. If you create a separate add-in in that database, use a unique ID. See [Geotab Storage API instructions](https://developers.geotab.com/myGeotab/addIns/addInStorage/).
+2. **Host the required files over HTTPS.** Place `fleet-summary.html`, `booking-domain.js`, and `booking.css` in the same folder. The page loads its assets using relative URLs.
+3. **Configure the add-in.** Update the hosted page URL and `supportEmail` in `configuration.json`, then add the configuration in **Administration > System > System Settings > Add-Ins**.
+4. **Grant the required clearances.** Users need permission to read `Device` objects and read/write `AddInData`. The add-in only enables booking creation when an active vehicle is available.
+
+## Booking behavior and limitations
+
+- Start and end times are entered in the browser's local time zone and stored as ISO 8601 UTC timestamps.
+- Overlapping active bookings for the same vehicle are rejected. Adjacent bookings are allowed (for example, one booking can start exactly when another ends).
+- Cancelling a booking sets its status to `cancelled`; the record is retained.
+- Reports include both confirmed and cancelled records. Date-range filtering uses the booking period, not the record creation time.
+- Report filtering and pagination run in the browser over the booking records returned by MyGeotab; pagination does not limit the records fetched from the API.
+- Conflict checking runs in the client before saving and is not atomic. Two users can still create overlapping bookings at the same time. The add-in checks again after saving and warns if a conflict is detected. Workflows that require a strict guarantee need a transactional backend.
+
+## Development
+
+Booking time validation, overlap checks, and report filters are in `booking-domain.js`. Run the tests with Node.js:
 
 ```sh
 node --test tests/booking-domain.test.js
 ```
 
-Referensi utama: [Geotab Storage API](https://developers.geotab.com/myGeotab/addIns/addInStorage/), [AddInData object](https://developers.geotab.com/myGeotab/apiReference/objects/AddInData/), dan [Developing Add-Ins](https://developers.geotab.com/myGeotab/addIns/developingAddIns/).
+### Project files
+
+- `fleet-summary.html` — dashboard markup and MyGeotab add-in behavior.
+- `booking.css` — responsive dashboard and booking styles.
+- `booking-domain.js` — booking time, conflict, and report filter logic.
+- `configuration.json` — MyGeotab add-in configuration template.
+- `tests/booking-domain.test.js` — focused tests for booking and report domain logic.
+
+## References
+
+- [Developing MyGeotab Add-Ins](https://developers.geotab.com/myGeotab/addIns/developingAddIns/)
+- [Geotab Storage API](https://developers.geotab.com/myGeotab/addIns/addInStorage/)
+- [AddInData object reference](https://developers.geotab.com/myGeotab/apiReference/objects/AddInData/)

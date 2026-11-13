@@ -1,82 +1,282 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Booking Kendaraan</title>
+  <title>Fleet Management | Vehicle Booking</title>
   <link rel="stylesheet" href="booking.css">
 </head>
 <body>
   <main class="booking-app">
     <header class="hero">
-      <div class="hero-mark" aria-hidden="true">BK</div>
+      <div class="hero-mark" aria-hidden="true">FM</div>
       <div>
-        <p class="eyebrow">MANAJEMEN ARMADA</p>
-        <h1>Booking Kendaraan</h1>
-        <p class="hero-copy">Atur jadwal pemakaian kendaraan operasional dalam satu tempat.</p>
+        <p class="eyebrow">FLEET MANAGEMENT</p>
+        <h1>Fleet Management</h1>
+        <p class="hero-copy">Manage vehicle bookings and fleet information in one place.</p>
       </div>
     </header>
 
-    <div id="status" class="status" role="status" aria-live="polite">Menghubungkan ke MyGeotab...</div>
+    <div class="app-shell">
+      <nav class="side-nav" aria-label="Add-in navigation">
+        <p class="eyebrow">MAIN MENU</p>
+        <button class="nav-item" type="button" data-page="booking" aria-current="page">Booking</button>
+        <button class="nav-item" type="button" data-page="approval">Approval</button>
+        <button class="nav-item" type="button" data-page="users">Users</button>
+        <button class="nav-item" type="button" data-page="reports">Reports</button>
+        <button class="nav-item" type="button" data-page="vehicles">Vehicles</button>
+      </nav>
 
-    <div class="booking-layout">
-      <section class="panel" aria-labelledby="formTitle">
-        <div class="section-heading">
-          <div>
-            <p class="eyebrow">JADWAL BARU</p>
-            <h2 id="formTitle">Buat booking</h2>
+      <div class="page-content">
+        <section id="page-booking" class="page-view" aria-labelledby="bookingPageTitle">
+          <div class="page-heading">
+            <div>
+              <p class="eyebrow">OPERATIONS</p>
+              <h2 id="bookingPageTitle">Vehicle bookings</h2>
+              <p class="page-description">Create bookings and track operational vehicle schedules.</p>
+            </div>
           </div>
-        </div>
-        <form id="bookingForm" class="booking-form">
-          <div class="field field-wide">
-            <label for="deviceId">Kendaraan</label>
-            <select id="deviceId" name="deviceId" required disabled>
-              <option value="">Memuat kendaraan...</option>
-            </select>
-          </div>
-          <div class="field">
-            <label for="startLocal">Mulai</label>
-            <input id="startLocal" name="startLocal" type="datetime-local" required disabled>
-          </div>
-          <div class="field">
-            <label for="endLocal">Selesai</label>
-            <input id="endLocal" name="endLocal" type="datetime-local" required disabled>
-          </div>
-          <div class="field field-wide">
-            <label for="purpose">Keperluan <span class="optional">(opsional)</span></label>
-            <input id="purpose" name="purpose" type="text" maxlength="160" placeholder="Contoh: kunjungan ke pelanggan" disabled>
-          </div>
-          <div class="field-wide form-actions">
-            <button id="submitButton" type="submit" disabled>Buat booking</button>
-            <button id="cancelEditButton" class="secondary" type="button" hidden>Batalkan perubahan</button>
-          </div>
-        </form>
-      </section>
 
-      <section class="panel bookings-panel" aria-labelledby="bookingsTitle">
-        <div class="section-heading">
-          <div>
-            <p class="eyebrow">AGENDA</p>
-            <h2 id="bookingsTitle">Daftar booking</h2>
+          <div id="status" class="status" role="status" aria-live="polite">Connecting to MyGeotab...</div>
+
+          <div class="booking-layout">
+            <section class="panel" aria-labelledby="formTitle">
+              <div class="section-heading">
+                <div>
+                  <p class="eyebrow">NEW BOOKING</p>
+                  <h3 id="formTitle">Create booking</h3>
+                </div>
+              </div>
+              <form id="bookingForm" class="booking-form">
+                <div class="field field-wide">
+                  <label for="deviceId">Vehicle</label>
+                  <select id="deviceId" name="deviceId" required disabled>
+                    <option value="">Loading vehicles...</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="startLocal">Start</label>
+                  <input id="startLocal" name="startLocal" type="datetime-local" required disabled>
+                </div>
+                <div class="field">
+                  <label for="endLocal">End</label>
+                  <input id="endLocal" name="endLocal" type="datetime-local" required disabled>
+                </div>
+                <div class="field field-wide">
+                  <label for="purpose">Purpose <span class="optional">(optional)</span></label>
+                  <input id="purpose" name="purpose" type="text" maxlength="160" placeholder="e.g. customer visit" disabled>
+                </div>
+                <div class="field-wide form-actions">
+                  <button id="submitButton" type="submit" disabled>Create booking</button>
+                  <button id="cancelEditButton" class="secondary" type="button" hidden>Cancel changes</button>
+                </div>
+              </form>
+            </section>
+
+            <section class="panel bookings-panel" aria-labelledby="bookingsTitle">
+              <div class="section-heading">
+                <div>
+                  <p class="eyebrow">SCHEDULE</p>
+                  <h3 id="bookingsTitle">Booking list</h3>
+                </div>
+              </div>
+              <div id="bookingList" class="booking-list">
+                <p class="empty">Bookings will appear here after the data loads.</p>
+              </div>
+            </section>
           </div>
-        </div>
-        <div id="bookingList" class="booking-list">
-          <p class="empty">Booking akan ditampilkan setelah data dimuat.</p>
-        </div>
-      </section>
+
+          <aside class="notice">
+            <strong>Conflict notice:</strong> conflicts are checked before saving, but the check is not atomic. Two users may still book the same time slot concurrently.
+          </aside>
+        </section>
+
+        <section id="page-approval" class="page-view" aria-labelledby="approvalPageTitle" hidden>
+          <div class="page-heading">
+            <div>
+              <p class="eyebrow">REVIEW</p>
+              <h2 id="approvalPageTitle">Approval</h2>
+              <p class="page-description">A place to review bookings that may require attention.</p>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">REVIEW QUEUE</p>
+                <h3>Bookings to review</h3>
+              </div>
+            </div>
+            <p class="empty">This is a visual placeholder. No approval workflow has been implemented.</p>
+          </div>
+        </section>
+
+        <section id="page-users" class="page-view" aria-labelledby="usersPageTitle" hidden>
+          <div class="page-heading">
+            <div>
+              <p class="eyebrow">ACCESS</p>
+              <h2 id="usersPageTitle">Users</h2>
+              <p class="page-description">View users and the roles assigned to their accounts.</p>
+            </div>
+          </div>
+          <section class="panel" aria-labelledby="usersTableTitle">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">DIRECTORY</p>
+                <h3 id="usersTableTitle">All users</h3>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Name</th>
+                    <th scope="col">Email</th>
+                    <th scope="col">Role</th>
+                    <th scope="col">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td colspan="4"><p class="empty table-empty">User data has not been loaded.</p></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="table-note">User records and roles will appear once user data integration is defined.</p>
+          </section>
+        </section>
+
+        <section id="page-reports" class="page-view" aria-labelledby="reportsPageTitle" hidden>
+          <div class="page-heading">
+            <div>
+              <p class="eyebrow">ANALYTICS</p>
+              <h2 id="reportsPageTitle">Reports</h2>
+              <p class="page-description">Insights into booking activity and fleet usage.</p>
+            </div>
+          </div>
+
+          <section class="panel report-filter-panel" aria-labelledby="reportFiltersTitle">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">FILTERS</p>
+                <h3 id="reportFiltersTitle">Find booking history</h3>
+                <p class="page-description">Dates use your browser's local time and include bookings that overlap any part of the selected range.</p>
+              </div>
+            </div>
+            <form id="reportFilterForm" class="report-filter-form">
+              <div class="field">
+                <label for="reportStartDate">From</label>
+                <input id="reportStartDate" name="fromDate" type="date">
+              </div>
+              <div class="field">
+                <label for="reportEndDate">To</label>
+                <input id="reportEndDate" name="toDate" type="date">
+              </div>
+              <div class="field">
+                <label for="reportVehicle">Vehicle</label>
+                <select id="reportVehicle" name="vehicleId">
+                  <option value="">All vehicles</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="reportStatus">Status</label>
+                <select id="reportStatus" name="status">
+                  <option value="all">All statuses</option>
+                  <option value="confirmed">Confirmed</option>
+                  <option value="cancelled">Cancelled</option>
+                  <option value="unknown">Unknown</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="reportRequester">Booked by</label>
+                <input id="reportRequester" name="requester" type="search" placeholder="Search requester">
+              </div>
+              <div class="report-filter-actions">
+                <button type="submit">Apply filters</button>
+                <button id="resetReportFilters" class="secondary" type="button">Reset</button>
+              </div>
+              <p id="reportFilterMessage" class="filter-message" role="alert" hidden></p>
+            </form>
+          </section>
+
+          <div class="report-grid">
+            <article class="panel report-card">
+              <p class="eyebrow">TOTAL BOOKINGS</p>
+              <p id="reportTotalBookings" class="report-value">0</p>
+              <p class="report-note">Matching the selected filters</p>
+            </article>
+            <article class="panel report-card">
+              <p class="eyebrow">VEHICLES USED</p>
+              <p id="reportVehiclesUsed" class="report-value">0</p>
+              <p class="report-note">In the matching booking history</p>
+            </article>
+            <article class="panel report-card">
+              <p class="eyebrow">CANCELLED BOOKINGS</p>
+              <p id="reportCancelledBookings" class="report-value">0</p>
+              <p class="report-note">Matching the selected filters</p>
+            </article>
+          </div>
+
+          <section class="panel report-history-panel" aria-labelledby="reportHistoryTitle">
+            <div class="section-heading report-history-heading">
+              <div>
+                <p class="eyebrow">HISTORY</p>
+                <h3 id="reportHistoryTitle">Booking history</h3>
+              </div>
+              <p id="reportResultSummary" class="report-result-summary" role="status" aria-live="polite"></p>
+            </div>
+            <div class="table-wrap">
+              <table class="data-table report-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Vehicle</th>
+                    <th scope="col">Booked by</th>
+                    <th scope="col">Purpose</th>
+                    <th scope="col">Start</th>
+                    <th scope="col">End</th>
+                    <th scope="col">Status</th>
+                  </tr>
+                </thead>
+                <tbody id="reportHistoryBody">
+                  <tr>
+                    <td colspan="6"><p class="empty table-empty">Booking history will appear after the data loads.</p></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="table-pagination">
+              <p id="reportPageSummary" class="table-note" aria-live="polite"></p>
+              <div class="pagination-actions">
+                <button id="reportPreviousPage" class="secondary" type="button" disabled>Previous</button>
+                <button id="reportNextPage" class="secondary" type="button" disabled>Next</button>
+              </div>
+            </div>
+          </section>
+        </section>
+
+        <section id="page-vehicles" class="page-view" aria-labelledby="vehiclesPageTitle" hidden>
+          <div class="page-heading">
+            <div>
+              <p class="eyebrow">FLEET</p>
+              <h2 id="vehiclesPageTitle">Vehicles</h2>
+              <p class="page-description">Vehicles available to this MyGeotab account.</p>
+            </div>
+          </div>
+          <section class="panel" aria-labelledby="vehicleSetupTitle">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">INVENTORY</p>
+                <h3 id="vehicleSetupTitle">Vehicle list and IDs</h3>
+              </div>
+            </div>
+            <p class="page-description">This list follows the account's access permissions. Active vehicles can be booked; inactive vehicles are shown for reference.</p>
+            <ul id="vehicleInventory" class="vehicle-inventory">
+              <li>Loading vehicles...</li>
+            </ul>
+          </section>
+        </section>
+      </div>
     </div>
-
-    <details class="panel vehicle-panel">
-      <summary id="vehicleSetupTitle">Daftar kendaraan dan ID</summary>
-      <p>Daftar dimuat dari API MyGeotab saat add-in dibuka. Kendaraan mengikuti hak akses akun; kendaraan aktif dapat dipilih, sedangkan kendaraan nonaktif hanya ditampilkan.</p>
-      <ul id="vehicleInventory" class="vehicle-inventory">
-        <li>Memuat kendaraan...</li>
-      </ul>
-    </details>
-
-    <aside class="notice">
-      <strong>Catatan bentrok:</strong> pemeriksaan dilakukan sebelum menyimpan, tetapi tidak atomik. Jika dua pengguna memesan slot yang sama bersamaan, booking ganda masih mungkin terjadi.
-    </aside>
   </main>
 
   <script src="booking-domain.js"></script>
@@ -97,6 +297,28 @@
       var statusElement = document.getElementById('status');
       var bookingList = document.getElementById('bookingList');
       var vehicleInventory = document.getElementById('vehicleInventory');
+      var navigation = document.querySelector('.side-nav');
+      var reportFilterForm = document.getElementById('reportFilterForm');
+      var reportStartDate = document.getElementById('reportStartDate');
+      var reportEndDate = document.getElementById('reportEndDate');
+      var reportVehicle = document.getElementById('reportVehicle');
+      var reportStatus = document.getElementById('reportStatus');
+      var reportRequester = document.getElementById('reportRequester');
+      var reportFilterMessage = document.getElementById('reportFilterMessage');
+      var reportHistoryBody = document.getElementById('reportHistoryBody');
+      var reportResultSummary = document.getElementById('reportResultSummary');
+      var reportPageSummary = document.getElementById('reportPageSummary');
+      var reportPreviousPage = document.getElementById('reportPreviousPage');
+      var reportNextPage = document.getElementById('reportNextPage');
+      var reportPage = 0;
+      var reportPageSize = 25;
+      var appliedReportFilters = {
+        fromDate: '',
+        toDate: '',
+        deviceId: '',
+        status: 'all',
+        requester: ''
+      };
       var currentApi = null;
       var currentUserName = '';
       var currentDevices = [];
@@ -177,15 +399,15 @@
         vehicleInventory.textContent = '';
         if (devices.length === 0) {
           var empty = document.createElement('li');
-          empty.textContent = 'Tidak ada kendaraan yang dapat diakses akun ini.';
+          empty.textContent = 'No vehicles are available to this account.';
           vehicleInventory.appendChild(empty);
           return;
         }
 
         devices.forEach(function (device) {
           var item = document.createElement('li');
-          item.textContent = (device.name || 'Kendaraan tanpa nama') + ' — ' + device.id +
-            (isDeviceActive(device) ? ' (Aktif)' : ' (Nonaktif)');
+          item.textContent = (device.name || 'Unnamed vehicle') + ' — ' + device.id +
+            (isDeviceActive(device) ? ' (Active)' : ' (Inactive)');
           vehicleInventory.appendChild(item);
         });
       }
@@ -196,14 +418,14 @@
         deviceSelect.textContent = '';
         var placeholder = document.createElement('option');
         placeholder.value = '';
-        placeholder.textContent = availableDevices.length ? 'Pilih kendaraan' : 'Tidak ada kendaraan aktif';
+        placeholder.textContent = availableDevices.length ? 'Select a vehicle' : 'No active vehicles';
         deviceSelect.appendChild(placeholder);
 
         devices.forEach(function (device) {
           var option = document.createElement('option');
           option.value = device.id;
-          option.textContent = (device.name || 'Kendaraan tanpa nama') + ' — ' + device.id +
-            (isDeviceActive(device) ? '' : ' (Nonaktif)');
+          option.textContent = (device.name || 'Unnamed vehicle') + ' — ' + device.id +
+            (isDeviceActive(device) ? '' : ' (Inactive)');
           option.disabled = !isDeviceActive(device);
           deviceSelect.appendChild(option);
         });
@@ -227,11 +449,11 @@
             try {
               details = JSON.parse(details);
             } catch (error) {
-              throw new Error('Data booking AddInData tidak dapat dibaca untuk record ' + record.id + '.');
+              throw new Error('Unable to read AddInData booking data for record ' + record.id + '.');
             }
           }
           if (!details || typeof details !== 'object') {
-            throw new Error('Record AddInData ' + record.id + ' tidak memiliki details yang valid.');
+            throw new Error('AddInData record ' + record.id + ' has invalid details.');
           }
           return {
             id: record.id,
@@ -243,7 +465,176 @@
 
       function formatDate(value) {
         var date = new Date(value);
-        return Number.isNaN(date.getTime()) ? 'Waktu tidak valid' : date.toLocaleString();
+        return Number.isNaN(date.getTime()) ? 'Invalid time' : date.toLocaleString('en-US');
+      }
+
+      function getReportStatus(details) {
+        if (details.status === 'confirmed') return 'Confirmed';
+        if (details.status === 'cancelled') return 'Cancelled';
+        return 'Unknown';
+      }
+
+      function getReportVehicleKey(details) {
+        return String(details.deviceId || details.deviceName || '');
+      }
+
+      function renderReportVehicleOptions() {
+        var selectedValue = reportVehicle.value;
+        var vehicles = [];
+
+        function addVehicle(id, name) {
+          if (!id) return;
+          var key = String(id);
+          var existing = vehicles.find(function (vehicle) { return vehicle.id === key; });
+          if (existing) {
+            if (!existing.name && name) existing.name = name;
+            return;
+          }
+          vehicles.push({ id: key, name: String(name || key) });
+        }
+
+        currentDevices.forEach(function (device) {
+          addVehicle(device.id, device.name);
+        });
+        currentBookings.forEach(function (record) {
+          addVehicle(getReportVehicleKey(record.details), record.details.deviceName);
+        });
+        vehicles.sort(function (first, second) {
+          return first.name.localeCompare(second.name);
+        });
+
+        reportVehicle.textContent = '';
+        var allOption = document.createElement('option');
+        allOption.value = '';
+        allOption.textContent = 'All vehicles';
+        reportVehicle.appendChild(allOption);
+        vehicles.forEach(function (vehicle) {
+          var option = document.createElement('option');
+          option.value = vehicle.id;
+          option.textContent = vehicle.name;
+          reportVehicle.appendChild(option);
+        });
+        reportVehicle.value = vehicles.some(function (vehicle) {
+          return vehicle.id === selectedValue;
+        }) ? selectedValue : '';
+      }
+
+      function renderReports() {
+        var filteredBookings = domain.filterBookings(currentBookings, appliedReportFilters);
+        filteredBookings.sort(function (first, second) {
+          var firstStart = Date.parse(first.details.startUtc);
+          var secondStart = Date.parse(second.details.startUtc);
+          if (!Number.isFinite(firstStart)) firstStart = Number.NEGATIVE_INFINITY;
+          if (!Number.isFinite(secondStart)) secondStart = Number.NEGATIVE_INFINITY;
+          return secondStart - firstStart;
+        });
+
+        var vehicleKeys = [];
+        var cancelledCount = 0;
+        filteredBookings.forEach(function (record) {
+          var details = record.details;
+          var vehicleKey = getReportVehicleKey(details);
+          if (vehicleKey && vehicleKeys.indexOf(vehicleKey) === -1) vehicleKeys.push(vehicleKey);
+          if (details.status === 'cancelled') cancelledCount += 1;
+        });
+        document.getElementById('reportTotalBookings').textContent = String(filteredBookings.length);
+        document.getElementById('reportVehiclesUsed').textContent = String(vehicleKeys.length);
+        document.getElementById('reportCancelledBookings').textContent = String(cancelledCount);
+
+        reportHistoryBody.textContent = '';
+        if (filteredBookings.length === 0) {
+          var emptyRow = document.createElement('tr');
+          var emptyCell = document.createElement('td');
+          emptyCell.colSpan = 6;
+          var emptyMessage = document.createElement('p');
+          emptyMessage.className = 'empty table-empty';
+          emptyMessage.textContent = currentBookings.length
+            ? 'No bookings match the selected filters.'
+            : 'No booking history is available.';
+          emptyCell.appendChild(emptyMessage);
+          emptyRow.appendChild(emptyCell);
+          reportHistoryBody.appendChild(emptyRow);
+          reportResultSummary.textContent = '0 bookings';
+          reportPageSummary.textContent = 'Showing 0 bookings';
+          reportPreviousPage.disabled = true;
+          reportNextPage.disabled = true;
+          return;
+        }
+
+        var pageCount = Math.ceil(filteredBookings.length / reportPageSize);
+        reportPage = Math.min(reportPage, pageCount - 1);
+        var pageStart = reportPage * reportPageSize;
+        var pageEnd = Math.min(pageStart + reportPageSize, filteredBookings.length);
+        filteredBookings.slice(pageStart, pageEnd).forEach(function (record) {
+          var details = record.details;
+          var device = currentDevices.find(function (item) {
+            return item.id === details.deviceId;
+          });
+          var row = document.createElement('tr');
+          var cells = [
+            device ? device.name || device.id : details.deviceName || details.deviceId || 'Unknown vehicle',
+            details.createdBy || 'Unknown',
+            details.purpose || '—',
+            formatDate(details.startUtc),
+            formatDate(details.endUtc)
+          ];
+          cells.forEach(function (value) {
+            var cell = document.createElement('td');
+            cell.textContent = value;
+            row.appendChild(cell);
+          });
+          var statusCell = document.createElement('td');
+          var statusBadge = document.createElement('span');
+          var status = getReportStatus(details);
+          statusBadge.className = 'booking-status booking-status-' + status.toLowerCase();
+          statusBadge.textContent = status;
+          statusCell.appendChild(statusBadge);
+          row.appendChild(statusCell);
+          reportHistoryBody.appendChild(row);
+        });
+
+        reportResultSummary.textContent = filteredBookings.length +
+          (filteredBookings.length === 1 ? ' booking' : ' bookings');
+        reportPageSummary.textContent = 'Showing ' + (pageStart + 1) + '-' + pageEnd +
+          ' of ' + filteredBookings.length + ' bookings';
+        reportPreviousPage.disabled = reportPage === 0;
+        reportNextPage.disabled = reportPage >= pageCount - 1;
+      }
+
+      function applyReportFilters(event) {
+        event.preventDefault();
+        if (reportStartDate.value && reportEndDate.value &&
+            reportStartDate.value > reportEndDate.value) {
+          reportFilterMessage.textContent = 'End date must be on or after start date.';
+          reportFilterMessage.hidden = false;
+          return;
+        }
+        reportFilterMessage.textContent = '';
+        reportFilterMessage.hidden = true;
+        appliedReportFilters = {
+          fromDate: reportStartDate.value,
+          toDate: reportEndDate.value,
+          deviceId: reportVehicle.value,
+          status: reportStatus.value,
+          requester: reportRequester.value
+        };
+        reportPage = 0;
+        renderReports();
+      }
+
+      function resetReportFilters() {
+        reportFilterForm.reset();
+        reportFilterMessage.textContent = '';
+        reportFilterMessage.hidden = true;
+        appliedReportFilters = {
+          fromDate: '',
+          toDate: '',
+          deviceId: '',
+          status: 'all',
+          requester: ''
+        };
+        reportPage = 0;
+        renderReports();
       }
 
       function renderBookings() {
@@ -255,7 +646,7 @@
         if (sortedBookings.length === 0) {
           var empty = document.createElement('p');
           empty.className = 'empty';
-          empty.textContent = 'Belum ada booking.';
+          empty.textContent = 'No bookings yet.';
           bookingList.appendChild(empty);
           return;
         }
@@ -271,12 +662,12 @@
           var title = document.createElement('p');
           title.className = 'booking-title';
           title.textContent = (device ? device.name : details.deviceName || details.deviceId) +
-            ' — ' + (details.status === 'cancelled' ? 'Dibatalkan' : 'Dikonfirmasi');
+            ' — ' + (details.status === 'cancelled' ? 'Cancelled' : 'Confirmed');
           var metadata = document.createElement('p');
           metadata.className = 'booking-meta';
           metadata.textContent = formatDate(details.startUtc) + ' – ' + formatDate(details.endUtc) +
-            ' | Pemesan: ' + (details.createdBy || 'tidak diketahui') +
-            (details.purpose ? ' | Keperluan: ' + details.purpose : '');
+            ' | Booked by: ' + (details.createdBy || 'Unknown') +
+            (details.purpose ? ' | Purpose: ' + details.purpose : '');
           content.appendChild(title);
           content.appendChild(metadata);
           card.appendChild(content);
@@ -289,14 +680,14 @@
             var editButton = document.createElement('button');
             editButton.type = 'button';
             editButton.className = 'secondary';
-            editButton.textContent = 'Ubah';
+            editButton.textContent = 'Edit';
             editButton.setAttribute('data-edit-id', record.id);
             actions.appendChild(editButton);
 
             var cancelButton = document.createElement('button');
             cancelButton.type = 'button';
             cancelButton.className = 'danger';
-            cancelButton.textContent = 'Batalkan';
+            cancelButton.textContent = 'Cancel';
             cancelButton.setAttribute('data-cancel-id', record.id);
             actions.appendChild(cancelButton);
           }
@@ -308,7 +699,7 @@
       async function refresh(api, quiet) {
         currentApi = api;
         var sequence = ++loadSequence;
-        if (!quiet) setStatus('Memuat kendaraan dan booking...', false);
+        if (!quiet) setStatus('Loading vehicles and bookings...', false);
 
         try {
           var results = await Promise.all([
@@ -325,24 +716,28 @@
           currentUserName = results[2].userName || '';
           renderDeviceInventory(currentDevices);
           renderBookings();
+          renderReportVehicleOptions();
+          renderReports();
 
           var configuration = renderDeviceOptions(currentDevices);
           canBook = configuration.availableCount > 0;
           updateFormState();
 
           if (currentDevices.length === 0) {
-            setStatus('Tidak ada kendaraan yang dapat diakses. Periksa hak akses Device untuk akun MyGeotab ini.', true);
+            setStatus('No vehicles are available. Check MyGeotab Device access permissions for this account.', true);
           } else if (configuration.availableCount === 0) {
-            setStatus('Kendaraan ditemukan, tetapi tidak ada kendaraan aktif yang dapat dibooking.', true);
+            setStatus('Vehicles were found, but none are active and available for booking.', true);
           } else if (!quiet) {
-            setStatus('Data berhasil dimuat. ' + configuration.availableCount + ' kendaraan aktif tersedia untuk booking.', false);
+            setStatus('Data loaded. ' + configuration.availableCount +
+              (configuration.availableCount === 1 ? ' active vehicle is' : ' active vehicles are') +
+              ' available for booking.', false);
           }
           return currentBookings.slice();
         } catch (error) {
           if (sequence === loadSequence) {
             canBook = false;
             updateFormState();
-            setStatus('Gagal memuat data MyGeotab: ' + errorText(error), true);
+            setStatus('Unable to load MyGeotab data: ' + errorText(error), true);
           }
           return null;
         }
@@ -356,8 +751,8 @@
       function resetForm() {
         editingRecordId = null;
         form.reset();
-        document.getElementById('formTitle').textContent = 'Buat booking';
-        submitButton.textContent = 'Buat booking';
+        document.getElementById('formTitle').textContent = 'Create booking';
+        submitButton.textContent = 'Create booking';
         cancelEditButton.hidden = true;
         setDefaultTimes();
         updateFormState();
@@ -376,8 +771,8 @@
         startInput.value = domain.toLocalDateTimeInput(record.details.startUtc);
         endInput.value = domain.toLocalDateTimeInput(record.details.endUtc);
         purposeInput.value = record.details.purpose || '';
-        document.getElementById('formTitle').textContent = 'Ubah booking';
-        submitButton.textContent = 'Simpan perubahan';
+        document.getElementById('formTitle').textContent = 'Edit booking';
+        submitButton.textContent = 'Save changes';
         cancelEditButton.hidden = false;
         window.scrollTo(0, 0);
       }
@@ -390,25 +785,25 @@
         try {
           var interval = domain.toUtcInterval(startInput.value, endInput.value);
           var device = currentDevices.find(function (item) { return item.id === deviceSelect.value; });
-          if (!device || !isDeviceActive(device)) throw new Error('Pilih kendaraan aktif yang valid.');
+          if (!device || !isDeviceActive(device)) throw new Error('Select a valid active vehicle.');
 
           var freshRecords = normalizeRecords(await getBookingRecords(currentApi));
           var recordsForConflictCheck = freshRecords.filter(function (record) {
             return String(record.id) !== String(editingRecordId);
           });
           if (domain.hasConflict(recordsForConflictCheck, device.id, interval.startUtc, interval.endUtc)) {
-            throw new Error('Kendaraan sudah memiliki booking aktif pada rentang waktu tersebut.');
+            throw new Error('This vehicle already has an active booking during that time.');
           }
 
           var existingRecord = editingRecordId ? freshRecords.find(function (record) {
             return String(record.id) === String(editingRecordId);
           }) : null;
           if (editingRecordId && (!existingRecord || existingRecord.details.status !== 'confirmed')) {
-            throw new Error('Booking tidak ditemukan atau sudah berubah. Muat ulang daftar.');
+            throw new Error('Booking not found or it has changed. Reload the list and try again.');
           }
           if (existingRecord &&
               String(existingRecord.details.createdBy || '').toLowerCase() !== currentUserName.toLowerCase()) {
-            throw new Error('Hanya pembuat booking yang dapat mengubahnya.');
+            throw new Error('Only the booking owner can edit this booking.');
           }
           var now = new Date().toISOString();
           var details = Object.assign({}, existingRecord ? existingRecord.details : {}, {
@@ -446,7 +841,7 @@
           var updatedRecords = await refresh(currentApi, true);
           resetForm();
           if (!updatedRecords) {
-            setStatus('Booking tersimpan, tetapi daftar tidak dapat dimuat ulang. Muat ulang add-in untuk memverifikasi.', true);
+            setStatus('Booking saved, but the list could not be refreshed. Reload the add-in to verify.', true);
             return;
           }
 
@@ -457,28 +852,28 @@
             interval.endUtc
           );
           if (concurrentConflict) {
-            setStatus('Booking tersimpan, tetapi terdeteksi booking lain pada slot yang sama. Hubungi admin untuk menyelesaikan bentrok.', true);
+            setStatus('Booking saved, but another booking was detected for the same time slot. Contact an administrator to resolve the conflict.', true);
           } else {
-            setStatus(existingRecord ? 'Perubahan booking berhasil disimpan.' : 'Booking berhasil dibuat.', false);
+            setStatus(existingRecord ? 'Booking changes saved.' : 'Booking created successfully.', false);
           }
         } catch (error) {
-          setStatus('Booking tidak dapat disimpan: ' + errorText(error), true);
+          setStatus('Unable to save booking: ' + errorText(error), true);
         } finally {
           setBusy(false);
         }
       }
 
       async function cancelBooking(id) {
-        if (isBusy || !window.confirm('Batalkan booking ini?')) return;
+        if (isBusy || !window.confirm('Cancel this booking?')) return;
         setBusy(true);
         try {
           var freshRecords = normalizeRecords(await getBookingRecords(currentApi));
           var record = freshRecords.find(function (item) { return String(item.id) === String(id); });
           if (!record || record.details.status !== 'confirmed') {
-            throw new Error('Booking tidak ditemukan atau sudah dibatalkan. Muat ulang daftar.');
+            throw new Error('Booking not found or it has already been cancelled. Reload the list and try again.');
           }
           if (String(record.details.createdBy || '').toLowerCase() !== currentUserName.toLowerCase()) {
-            throw new Error('Hanya pembuat booking yang dapat membatalkannya.');
+            throw new Error('Only the booking owner can cancel this booking.');
           }
 
           var details = Object.assign({}, record.details, {
@@ -498,12 +893,12 @@
           var refreshedRecords = await refresh(currentApi, true);
           if (String(editingRecordId) === String(id)) resetForm();
           if (!refreshedRecords) {
-            setStatus('Booking dibatalkan, tetapi daftar tidak dapat dimuat ulang. Muat ulang add-in untuk memverifikasi.', true);
+            setStatus('Booking cancelled, but the list could not be refreshed. Reload the add-in to verify.', true);
             return;
           }
-          setStatus('Booking berhasil dibatalkan.', false);
+          setStatus('Booking cancelled successfully.', false);
         } catch (error) {
-          setStatus('Booking tidak dapat dibatalkan: ' + errorText(error), true);
+          setStatus('Unable to cancel booking: ' + errorText(error), true);
         } finally {
           setBusy(false);
         }
@@ -513,6 +908,29 @@
         if (listenersBound) return;
         form.addEventListener('submit', submitBooking);
         cancelEditButton.addEventListener('click', resetForm);
+        reportFilterForm.addEventListener('submit', applyReportFilters);
+        document.getElementById('resetReportFilters').addEventListener('click', resetReportFilters);
+        reportPreviousPage.addEventListener('click', function () {
+          if (reportPage === 0) return;
+          reportPage -= 1;
+          renderReports();
+        });
+        reportNextPage.addEventListener('click', function () {
+          reportPage += 1;
+          renderReports();
+        });
+        navigation.addEventListener('click', function (event) {
+          var button = event.target.closest('[data-page]');
+          if (!button) return;
+          var pageId = 'page-' + button.getAttribute('data-page');
+          document.querySelectorAll('.page-view').forEach(function (page) {
+            page.hidden = page.id !== pageId;
+          });
+          navigation.querySelectorAll('[data-page]').forEach(function (item) {
+            if (item === button) item.setAttribute('aria-current', 'page');
+            else item.removeAttribute('aria-current');
+          });
+        });
         bookingList.addEventListener('click', function (event) {
           var editButton = event.target.closest('[data-edit-id]');
           var cancelButton = event.target.closest('[data-cancel-id]');
