@@ -209,7 +209,7 @@
   border-left-color: #c53b32;
 }
 
-.kpi-grid-3 {
+.booking-app .kpi-grid-3 {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
@@ -288,7 +288,7 @@
 }
 
 @media (max-width: 560px) {
-  .kpi-grid-3 {
+  .booking-app .kpi-grid-3 {
     grid-template-columns: 1fr;
   }
 

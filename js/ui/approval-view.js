@@ -441,8 +441,13 @@
       });
     }
 
+    function isReviewOpen() {
+      return reviewingRecordId !== null || isSubmitting;
+    }
+
     return {
       bind: bind,
+      isReviewOpen: isReviewOpen,
       render: render
     };
   }

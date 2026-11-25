@@ -28,8 +28,12 @@
     isBusy: false
   };
 
+  var AUTO_REFRESH_COOLDOWN_MS = 15000;
   var loadSequence = 0;
   var usersLoadSequence = 0;
+  var lastBookingsSyncAt = 0;
+  var isQuietRefreshing = false;
+  var isAddInFocused = false;
   var listenersBound = false;
 
   var vehiclesView = ns.VehiclesView.create({
@@ -104,6 +108,36 @@
     if (pageName === 'approval') approvalView.render();
     if (pageName === 'users') usersView.render();
     if (pageName === 'vehicles') vehiclesView.render();
+    refreshBookingsQuiet(false);
+  }
+
+  async function refreshBookingsQuiet(force) {
+    if (!state.api || !state.currentUserName || state.isBusy || isQuietRefreshing) return;
+    if (!force && (Date.now() - lastBookingsSyncAt) < AUTO_REFRESH_COOLDOWN_MS) return;
+
+    var startSequence = loadSequence;
+    isQuietRefreshing = true;
+    try {
+      var freshBookings = await apiService.getBookingRecords(state.api);
+      if (startSequence !== loadSequence) return;
+
+      state.bookings = freshBookings;
+      lastBookingsSyncAt = Date.now();
+      syncAdminNavigation();
+      bookingView.renderList();
+      vehiclesView.render();
+      usersView.render();
+      reportsView.renderVehicleOptions();
+      reportsView.renderRequesterOptions();
+      reportsView.render();
+      if (!approvalView.isReviewOpen()) {
+        approvalView.render();
+      }
+    } catch (error) {
+      // Keep current cached view if silent background refresh fails
+    } finally {
+      isQuietRefreshing = false;
+    }
   }
 
   function syncAdminNavigation() {
@@ -184,6 +218,7 @@
       state.devices = results[0];
       state.bookings = results[1];
       state.currentUserName = (results[2] && results[2].userName) || '';
+      lastBookingsSyncAt = Date.now();
 
       var clearance = await apiService.resolveCurrentUserClearance(api, state.currentUserName, userDomain);
       if (sequence !== loadSequence) return null;
@@ -248,6 +283,12 @@
       switchPage(button.getAttribute('data-page'));
     });
 
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'visible' && isAddInFocused) {
+        refreshBookingsQuiet(false);
+      }
+    });
+
     listenersBound = true;
   }
 
@@ -256,18 +297,22 @@
   root.geotab.addin.fleetSummaryDashboard = function () {
     return {
       initialize: function (api, pageState, callback) {
+        isAddInFocused = true;
         bindListeners();
         refresh(api, false).then(function () {
           callback();
         });
       },
       focus: function (api) {
+        isAddInFocused = true;
         refresh(api, false);
         if (state.isAdministrator && isAdminOnlyPage(state.activePage)) {
           loadUsers(api, true);
         }
       },
-      blur: function () {}
+      blur: function () {
+        isAddInFocused = false;
+      }
     };
   };
 }(typeof globalThis !== 'undefined' ? globalThis : this));
