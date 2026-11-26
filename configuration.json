@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "items": [
     {
-      "url": "https://YOUR_HTTPS_HOST/fleet-summary.html",
+      "url": "https://heppyht.github.io/geotabfleetbookingaddin/fleet-summary.html",
       "path": "ActivityLink/",
       "menuName": {
         "en": "Vehicle Booking",
