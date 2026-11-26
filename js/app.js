@@ -8,6 +8,7 @@
   var fmt = ns.Formatters;
 
   var navigation = document.querySelector('.side-nav');
+  var heroUserBadge = document.getElementById('heroUserBadge');
   var approvalNavButton = navigation.querySelector('[data-page="approval"]');
   var usersNavButton = navigation.querySelector('[data-page="users"]');
   var approvalPendingBadge = document.getElementById('approvalPendingBadge');
@@ -140,6 +141,12 @@
     }
   }
 
+  function updateHeroUser(userName) {
+    if (!heroUserBadge) return;
+    heroUserBadge.textContent = userName || '';
+    heroUserBadge.hidden = !userName;
+  }
+
   function syncAdminNavigation() {
     approvalNavButton.hidden = !state.isAdministrator;
     usersNavButton.hidden = !state.isAdministrator;
@@ -218,6 +225,7 @@
       state.devices = results[0];
       state.bookings = results[1];
       state.currentUserName = (results[2] && results[2].userName) || '';
+      updateHeroUser(state.currentUserName);
       lastBookingsSyncAt = Date.now();
 
       var clearance = await apiService.resolveCurrentUserClearance(api, state.currentUserName, userDomain);
@@ -247,14 +255,7 @@
       }
 
       if (!quiet) {
-        var myCount = state.bookings.filter(function (record) {
-          return bookingDomain.isBookingOwner(record.details, state.currentUserName);
-        }).length;
-        bookingView.setStatus(
-          'Connected as ' + state.currentUserName + '. You have ' + myCount +
-            (myCount === 1 ? ' booking record.' : ' booking records.'),
-          false
-        );
+        bookingView.clearStatus();
       }
       return state.bookings.slice();
     } catch (error) {

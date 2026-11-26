@@ -287,6 +287,27 @@
   overflow-wrap: anywhere;
 }
 
+.cell-sub-danger {
+  color: #9e2d26;
+}
+
+.cell-muted {
+  color: #6b7c8f;
+  font-weight: 500;
+}
+
+.col-actions {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.table-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
 @media (max-width: 560px) {
   .booking-app .kpi-grid-3 {
     grid-template-columns: 1fr;

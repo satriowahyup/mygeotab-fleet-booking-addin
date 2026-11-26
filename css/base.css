@@ -23,32 +23,41 @@ body {
 .hero {
   display: flex;
   align-items: center;
-  gap: 18px;
-  padding: 26px 30px;
-  margin-bottom: 18px;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 14px 18px;
+  padding: 18px 24px;
+  margin-bottom: 14px;
   color: #fff;
   background: linear-gradient(120deg, #123b68, #1769aa);
   border-radius: 14px;
   box-shadow: 0 8px 22px rgba(25, 68, 109, .16);
 }
 
+.hero-brand {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+}
+
 .hero-mark {
   display: grid;
-  flex: 0 0 54px;
-  width: 54px;
-  height: 54px;
+  flex: 0 0 48px;
+  width: 48px;
+  height: 48px;
   place-items: center;
   color: #123b68;
   background: #fff;
-  border-radius: 15px;
-  font-size: 17px;
+  border-radius: 13px;
+  font-size: 16px;
   font-weight: 800;
   letter-spacing: .04em;
 }
 
 .hero h1 {
-  margin: 2px 0 5px;
-  font-size: clamp(24px, 3vw, 32px);
+  margin: 2px 0 4px;
+  font-size: clamp(21px, 2.5vw, 26px);
   line-height: 1.2;
 }
 
@@ -59,7 +68,20 @@ body {
 
 .hero-copy {
   color: #e4effa;
-  font-size: 14px;
+  font-size: 13px;
+}
+
+.hero-user {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  color: #e8f2fc;
+  background: rgba(255, 255, 255, .14);
+  border: 1px solid rgba(255, 255, 255, .24);
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 .eyebrow {
@@ -86,10 +108,8 @@ body {
 }
 
 .side-nav {
-  display: grid;
-  gap: 8px;
-  padding: 12px 14px;
-  margin-bottom: 18px;
+  padding: 8px 10px;
+  margin-bottom: 16px;
   background: #fff;
   border: 1px solid #e3e9ef;
   border-radius: 12px;
@@ -317,6 +337,25 @@ textarea:disabled {
 .booking-app button.fm-btn-reject:hover:not(:disabled) {
   color: #fff;
   background: #922b25;
+}
+
+.booking-app button.danger-subtle {
+  color: #b83a32;
+  background: #fff;
+  border: 1px solid #e6b8b4;
+}
+
+.booking-app button.danger-subtle:hover:not(:disabled) {
+  color: #fff;
+  background: #b83a32;
+  border-color: #b83a32;
+}
+
+.booking-app button.btn-sm {
+  min-height: 32px;
+  padding: 5px 11px;
+  font-size: 12px;
+  border-radius: 6px;
 }
 
 .booking-app button.fm-btn-approve {

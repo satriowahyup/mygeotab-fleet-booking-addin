@@ -8,6 +8,7 @@
     var state = deps.state;
     var onDataChanged = deps.onDataChanged;
 
+    var formPanel = document.getElementById('bookingFormPanel');
     var form = document.getElementById('bookingForm');
     var formTitle = document.getElementById('formTitle');
     var startInput = document.getElementById('startLocal');
@@ -17,15 +18,23 @@
     var submitButton = document.getElementById('submitButton');
     var cancelEditButton = document.getElementById('cancelEditButton');
     var statusElement = document.getElementById('status');
+    var statusFilter = document.getElementById('bookingStatusFilter');
     var rangeFilter = document.getElementById('bookingRangeFilter');
     var scheduleSummary = document.getElementById('bookingListSummary');
-    var bookingList = document.getElementById('bookingList');
+    var bookingTableBody = document.getElementById('bookingTableBody');
 
     var editingRecordId = null;
 
     function setStatus(message, isError) {
-      statusElement.textContent = message;
+      statusElement.textContent = message || '';
       statusElement.setAttribute('data-error', isError ? 'true' : 'false');
+      statusElement.hidden = !message;
+    }
+
+    function clearStatus() {
+      statusElement.textContent = '';
+      statusElement.removeAttribute('data-error');
+      statusElement.hidden = true;
     }
 
     function setDefaultTimes() {
@@ -52,6 +61,7 @@
       formTitle.textContent = 'Create booking';
       submitButton.textContent = 'Submit request';
       cancelEditButton.hidden = true;
+      if (formPanel) formPanel.classList.remove('is-editing');
       setDefaultTimes();
       updateFormState();
     }
@@ -74,35 +84,129 @@
       formTitle.textContent = 'Edit pending booking';
       submitButton.textContent = 'Save changes';
       cancelEditButton.hidden = false;
+      if (formPanel) {
+        formPanel.classList.add('is-editing');
+        formPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
       startInput.focus();
     }
 
-    function buildAssignmentLine(details, status) {
+    function appendCellLine(parent, text, className) {
+      var span = document.createElement('span');
+      span.className = className;
+      span.textContent = text;
+      parent.appendChild(span);
+    }
+
+    function matchesStatusFilter(status, selected) {
+      if (!selected || selected === 'all') return true;
+      if (selected === 'approved') return status === 'approved' || status === 'confirmed';
+      return status === selected;
+    }
+
+    function renderAssignmentCell(cell, details, status) {
       if (status === 'approved' || status === 'confirmed') {
-        var vehicle = fmt.resolveDeviceName(details, state.devices);
-        var driver = details.driverName || details.driverLogin || 'Unassigned';
-        return 'Vehicle: ' + vehicle + ' | Driver: ' + driver;
+        appendCellLine(cell, fmt.resolveDeviceName(details, state.devices), 'cell-primary');
+        appendCellLine(cell, 'Driver: ' + (details.driverName || details.driverLogin || 'Unassigned'), 'cell-sub');
+        return;
       }
       if (status === 'pending') {
-        return 'Vehicle & driver: Awaiting administrator approval';
+        appendCellLine(cell, 'Awaiting approval', 'cell-primary cell-muted');
+        appendCellLine(cell, 'Assigned by administrator', 'cell-sub');
+        return;
       }
       if (status === 'rejected') {
-        return details.reviewedBy ? 'Rejected by: ' + details.reviewedBy : 'Rejected by administrator';
+        appendCellLine(cell, 'Not assigned', 'cell-primary cell-muted');
+        appendCellLine(cell, details.reviewedBy ? 'Rejected by ' + details.reviewedBy : 'Rejected by administrator', 'cell-sub');
+        return;
       }
       var cancelledByOther = details.cancelledBy &&
         String(details.cancelledBy).toLowerCase() !== String(state.currentUserName || '').toLowerCase();
-      var prefix = cancelledByOther
-        ? 'Cancelled by administrator (' + details.cancelledBy + ')'
-        : 'Cancelled booking';
-      return details.deviceName || details.deviceId
-        ? prefix + ' | Previous vehicle: ' + fmt.resolveDeviceName(details, state.devices)
-        : prefix;
+      var vehicleText = (details.deviceName || details.deviceId)
+        ? fmt.resolveDeviceName(details, state.devices)
+        : 'Not assigned';
+      appendCellLine(cell, vehicleText, 'cell-primary cell-muted');
+      appendCellLine(cell, cancelledByOther ? 'Cancelled by ' + details.cancelledBy : 'Cancelled by you', 'cell-sub');
+    }
+
+    function buildBookingRow(record) {
+      var details = record.details || {};
+      var status = domain.normalizeStatus(details.status);
+      var row = document.createElement('tr');
+
+      var scheduleCell = document.createElement('td');
+      var summary = fmt.getScheduleSummary(details.startUtc, details.endUtc);
+      appendCellLine(scheduleCell, summary.dateText, 'cell-primary');
+      appendCellLine(
+        scheduleCell,
+        summary.timeText + (summary.durationText ? ' (' + summary.durationText + ')' : ''),
+        'cell-sub'
+      );
+      row.appendChild(scheduleCell);
+
+      var tripCell = document.createElement('td');
+      appendCellLine(tripCell, details.destination || 'Not specified', 'cell-primary');
+      appendCellLine(tripCell, details.purpose || 'Not specified', 'cell-sub');
+      row.appendChild(tripCell);
+
+      var assignmentCell = document.createElement('td');
+      renderAssignmentCell(assignmentCell, details, status);
+      row.appendChild(assignmentCell);
+
+      var statusCell = document.createElement('td');
+      statusCell.appendChild(fmt.createStatusBadge(status));
+      if (details.approvalNotes) {
+        appendCellLine(
+          statusCell,
+          (status === 'rejected' ? 'Reason: ' : 'Note: ') + details.approvalNotes,
+          status === 'rejected' ? 'cell-sub cell-sub-danger' : 'cell-sub'
+        );
+      }
+      if (status === 'cancelled' && details.cancellationReason) {
+        appendCellLine(statusCell, 'Reason: ' + details.cancellationReason, 'cell-sub cell-sub-danger');
+      }
+      row.appendChild(statusCell);
+
+      var actionsCell = document.createElement('td');
+      actionsCell.className = 'col-actions';
+      var canEdit = domain.canRequesterEdit(details, state.currentUserName);
+      var canCancel = domain.canRequesterCancel(details, state.currentUserName);
+      if (canEdit || canCancel) {
+        var actions = document.createElement('div');
+        actions.className = 'table-actions';
+        if (canEdit) {
+          var editButton = document.createElement('button');
+          editButton.type = 'button';
+          editButton.className = 'secondary btn-sm';
+          editButton.textContent = 'Edit';
+          editButton.setAttribute('data-edit-id', record.id);
+          actions.appendChild(editButton);
+        }
+        if (canCancel) {
+          var cancelButton = document.createElement('button');
+          cancelButton.type = 'button';
+          cancelButton.className = 'danger-subtle btn-sm';
+          cancelButton.textContent = 'Cancel';
+          cancelButton.setAttribute('data-cancel-id', record.id);
+          actions.appendChild(cancelButton);
+        }
+        actionsCell.appendChild(actions);
+      } else {
+        appendCellLine(actionsCell, '-', 'cell-muted');
+      }
+      row.appendChild(actionsCell);
+
+      return row;
     }
 
     function renderList() {
-      bookingList.textContent = '';
+      bookingTableBody.textContent = '';
       var preset = rangeFilter.value || 'this_week';
-      var myBookings = domain.filterMyBookings(state.bookings, state.currentUserName, preset);
+      var selectedStatus = statusFilter ? statusFilter.value : 'all';
+      var myBookings = domain.filterMyBookings(state.bookings, state.currentUserName, preset)
+        .filter(function (record) {
+          return matchesStatusFilter(domain.normalizeStatus(record.details && record.details.status), selectedStatus);
+        });
       myBookings.sort(function (first, second) {
         return Date.parse(first.details.startUtc) - Date.parse(second.details.startUtc);
       });
@@ -111,89 +215,18 @@
         return domain.isBookingOwner(record.details, state.currentUserName);
       }).length;
 
-      scheduleSummary.textContent = 'Showing ' + myBookings.length + ' of ' + totalMine +
-        (totalMine === 1 ? ' booking created by you.' : ' bookings created by you.');
+      scheduleSummary.textContent = '(' + myBookings.length + ' of ' + totalMine + ')';
 
       if (myBookings.length === 0) {
         var emptyMessage = totalMine > 0
-          ? 'No bookings in this time range. Switch the filter to Upcoming or All to see other schedules.'
+          ? 'No bookings match the selected filters. Adjust Status or Time range to see other schedules.'
           : 'You have not created any bookings yet.';
-        bookingList.appendChild(fmt.createEmptyBlock(emptyMessage));
+        bookingTableBody.appendChild(fmt.createTableEmptyRow(5, emptyMessage));
         return;
       }
 
       myBookings.forEach(function (record) {
-        var details = record.details || {};
-        var status = domain.normalizeStatus(details.status);
-        var card = document.createElement('article');
-        card.className = 'booking';
-
-        var content = document.createElement('div');
-        content.className = 'booking-details';
-
-        var headerRow = document.createElement('div');
-        headerRow.className = 'booking-header-row';
-        var title = document.createElement('p');
-        title.className = 'booking-title';
-        title.textContent = details.destination || details.purpose || 'Booking request';
-        headerRow.appendChild(title);
-        headerRow.appendChild(fmt.createStatusBadge(status));
-        content.appendChild(headerRow);
-
-        var purposeMeta = document.createElement('p');
-        purposeMeta.className = 'booking-purpose';
-        purposeMeta.textContent = 'Purpose: ' + (details.purpose || 'Not specified');
-        content.appendChild(purposeMeta);
-
-        var scheduleMeta = document.createElement('p');
-        scheduleMeta.className = 'booking-meta';
-        scheduleMeta.textContent = fmt.formatDateRange(details.startUtc, details.endUtc);
-        content.appendChild(scheduleMeta);
-
-        var assignmentMeta = document.createElement('p');
-        assignmentMeta.className = 'booking-meta';
-        assignmentMeta.textContent = buildAssignmentLine(details, status);
-        content.appendChild(assignmentMeta);
-
-        if (details.approvalNotes) {
-          var notes = document.createElement('p');
-          notes.className = status === 'rejected'
-            ? 'notes-callout notes-callout-rejected'
-            : 'notes-callout';
-          notes.textContent = (status === 'rejected' ? 'Rejection reason: ' : 'Admin notes: ') +
-            details.approvalNotes;
-          content.appendChild(notes);
-        }
-
-        if (status === 'cancelled' && details.cancellationReason) {
-          var cancelReason = document.createElement('p');
-          cancelReason.className = 'notes-callout notes-callout-rejected';
-          cancelReason.textContent = 'Cancellation reason: ' + details.cancellationReason;
-          content.appendChild(cancelReason);
-        }
-
-        card.appendChild(content);
-
-        var actions = document.createElement('div');
-        actions.className = 'booking-actions';
-        if (domain.canRequesterEdit(details, state.currentUserName)) {
-          var editButton = document.createElement('button');
-          editButton.type = 'button';
-          editButton.className = 'secondary';
-          editButton.textContent = 'Edit';
-          editButton.setAttribute('data-edit-id', record.id);
-          actions.appendChild(editButton);
-        }
-        if (domain.canRequesterCancel(details, state.currentUserName)) {
-          var cancelButton = document.createElement('button');
-          cancelButton.type = 'button';
-          cancelButton.className = 'danger';
-          cancelButton.textContent = 'Cancel';
-          cancelButton.setAttribute('data-cancel-id', record.id);
-          actions.appendChild(cancelButton);
-        }
-        if (actions.childNodes.length) card.appendChild(actions);
-        bookingList.appendChild(card);
+        bookingTableBody.appendChild(buildBookingRow(record));
       });
     }
 
@@ -263,14 +296,15 @@
         }
 
         var bounds = domain.getTimeRangeBounds(rangeFilter.value || 'this_week');
-        var visibleInCurrentFilter = domain.isBookingInBounds(details, bounds);
+        var visibleInCurrentFilter = domain.isBookingInBounds(details, bounds) &&
+          matchesStatusFilter('pending', statusFilter ? statusFilter.value : 'all');
         var baseMessage = existingRecord
           ? 'Pending booking updated.'
           : 'Booking request submitted (status: Pending approval).';
         setStatus(
           visibleInCurrentFilter
             ? baseMessage
-            : baseMessage + ' This date is outside the current filter; switch the time range to Upcoming or All to view it.',
+            : baseMessage + ' This booking is hidden by the current filters; adjust Status or Time range to view it.',
           false
         );
       } catch (error) {
@@ -331,8 +365,9 @@
     function bind() {
       form.addEventListener('submit', submitBooking);
       cancelEditButton.addEventListener('click', resetForm);
+      if (statusFilter) statusFilter.addEventListener('change', renderList);
       rangeFilter.addEventListener('change', renderList);
-      bookingList.addEventListener('click', function (event) {
+      bookingTableBody.addEventListener('click', function (event) {
         var editButton = event.target.closest('[data-edit-id]');
         var cancelButton = event.target.closest('[data-cancel-id]');
         if (editButton) beginEdit(editButton.getAttribute('data-edit-id'));
@@ -343,6 +378,7 @@
 
     return {
       bind: bind,
+      clearStatus: clearStatus,
       renderList: renderList,
       resetForm: resetForm,
       setStatus: setStatus,

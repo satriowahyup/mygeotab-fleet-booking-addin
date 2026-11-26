@@ -3,25 +3,27 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Fleet Management | Vehicle Booking</title>
-  <link rel="stylesheet" href="css/base.css?v=20261125-2">
-  <link rel="stylesheet" href="css/components.css?v=20261125-2">
-  <link rel="stylesheet" href="css/pages.css?v=20261125-2">
+  <title>Vehicle Booking | MyGeotab Fleet</title>
+  <link rel="stylesheet" href="css/base.css?v=20261126-1">
+  <link rel="stylesheet" href="css/components.css?v=20261126-1">
+  <link rel="stylesheet" href="css/pages.css?v=20261126-1">
 </head>
 <body>
   <main class="booking-app">
     <header class="hero">
-      <div class="hero-mark" aria-hidden="true">FM</div>
-      <div>
-        <p class="eyebrow">FLEET MANAGEMENT</p>
-        <h1>Fleet Management</h1>
-        <p class="hero-copy">Submit vehicle booking requests, dispatch fleet assignments, and track booking history.</p>
+      <div class="hero-brand">
+        <div class="hero-mark" aria-hidden="true">VB</div>
+        <div>
+          <p class="eyebrow">MYGEOTAB FLEET</p>
+          <h1>Vehicle Booking</h1>
+          <p class="hero-copy">Request shared vehicles, manage dispatch approvals, and track booking history.</p>
+        </div>
       </div>
+      <div id="heroUserBadge" class="hero-user" hidden></div>
     </header>
 
     <div class="app-shell">
       <nav class="side-nav" aria-label="Add-in navigation">
-        <p class="eyebrow">MAIN MENU</p>
         <div class="nav-items">
           <button class="nav-item" type="button" data-page="booking" aria-current="page">Booking</button>
           <button class="nav-item" type="button" data-page="approval" hidden>
@@ -37,22 +39,16 @@
       <div class="page-content">
         <section id="page-booking" class="page-view" aria-labelledby="bookingPageTitle">
           <div class="page-heading">
-            <div>
-              <p class="eyebrow">OPERATIONS</p>
-              <h2 id="bookingPageTitle">Vehicle bookings</h2>
-              <p class="page-description">Submit booking requests with your travel schedule, purpose, and destination. An Administrator will assign an available vehicle and driver during approval.</p>
-            </div>
+            <h2 id="bookingPageTitle">Vehicle bookings</h2>
+            <p class="page-description">Submit booking requests with your travel schedule, purpose, and destination. An Administrator will assign an available vehicle and driver during approval.</p>
           </div>
 
           <div id="status" class="status" role="status" aria-live="polite">Connecting to MyGeotab...</div>
 
           <div class="booking-layout">
-            <section class="panel" aria-labelledby="formTitle">
-              <div class="section-heading">
-                <div>
-                  <p class="eyebrow">NEW REQUEST</p>
-                  <h3 id="formTitle">Create booking</h3>
-                </div>
+            <section id="bookingFormPanel" class="panel booking-form-panel" aria-labelledby="formTitle">
+              <div class="section-heading section-heading-compact">
+                <h3 id="formTitle">Create booking</h3>
               </div>
               <form id="bookingForm" class="booking-form">
                 <div class="field">
@@ -63,28 +59,41 @@
                   <label for="endLocal">End <span class="required-mark" aria-hidden="true">*</span></label>
                   <input id="endLocal" name="endLocal" type="datetime-local" required disabled>
                 </div>
-                <div class="field field-wide">
+                <div class="field">
                   <label for="destination">Destination <span class="required-mark" aria-hidden="true">*</span></label>
                   <input id="destination" name="destination" type="text" maxlength="160" placeholder="e.g. Cikarang Industrial Area" required disabled>
                 </div>
-                <div class="field field-wide">
+                <div class="field">
                   <label for="purpose">Purpose <span class="required-mark" aria-hidden="true">*</span></label>
                   <input id="purpose" name="purpose" type="text" maxlength="160" placeholder="e.g. Customer site visit" required disabled>
                 </div>
-                <div class="field-wide form-actions">
-                  <button id="submitButton" type="submit" disabled>Submit request</button>
-                  <button id="cancelEditButton" class="secondary" type="button" hidden>Cancel changes</button>
+                <div class="field-wide form-footer">
+                  <div class="form-actions">
+                    <button id="submitButton" type="submit" disabled>Submit request</button>
+                    <button id="cancelEditButton" class="secondary" type="button" hidden>Cancel changes</button>
+                  </div>
+                  <p class="form-workflow-note">Requests start as <strong>Pending</strong> until reviewed by an Administrator. Approved bookings cannot be edited.</p>
                 </div>
               </form>
             </section>
 
             <section class="panel bookings-panel" aria-labelledby="bookingsTitle">
               <div class="section-heading">
-                <div>
-                  <p class="eyebrow">MY SCHEDULE</p>
+                <div class="bookings-heading-title">
                   <h3 id="bookingsTitle">My bookings</h3>
+                  <span id="bookingListSummary" class="schedule-summary" aria-live="polite"></span>
                 </div>
                 <div class="schedule-controls">
+                  <div class="field schedule-filter-field">
+                    <label for="bookingStatusFilter">Status</label>
+                    <select id="bookingStatusFilter" name="bookingStatusFilter">
+                      <option value="all" selected>All statuses</option>
+                      <option value="pending">Pending</option>
+                      <option value="approved">Approved</option>
+                      <option value="rejected">Rejected</option>
+                      <option value="cancelled">Cancelled</option>
+                    </select>
+                  </div>
                   <div class="field schedule-filter-field">
                     <label for="bookingRangeFilter">Time range</label>
                     <select id="bookingRangeFilter" name="bookingRangeFilter">
@@ -96,25 +105,30 @@
                   </div>
                 </div>
               </div>
-              <p id="bookingListSummary" class="schedule-summary" aria-live="polite"></p>
-              <div id="bookingList" class="booking-list">
-                <p class="empty">Bookings will appear here after the data loads.</p>
+              <div class="table-wrap">
+                <table class="data-table my-bookings-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Schedule</th>
+                      <th scope="col">Destination &amp; purpose</th>
+                      <th scope="col">Assignment</th>
+                      <th scope="col">Status</th>
+                      <th scope="col" class="col-actions">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="bookingTableBody">
+                    <tr><td colspan="5"><p class="empty table-empty">Bookings will appear here after the data loads.</p></td></tr>
+                  </tbody>
+                </table>
               </div>
             </section>
           </div>
-
-          <aside class="notice">
-            <strong>Workflow notice:</strong> New requests start as <strong>Pending</strong> until reviewed by an Administrator. Approved bookings cannot be edited; cancel the booking and submit a new request if schedule changes are needed.
-          </aside>
         </section>
 
         <section id="page-approval" class="page-view" aria-labelledby="approvalPageTitle" hidden>
           <div class="page-heading">
-            <div>
-              <p class="eyebrow">DISPATCH &amp; REVIEW</p>
-              <h2 id="approvalPageTitle">Approval queue</h2>
-              <p class="page-description">Review pending booking requests, assign an available vehicle and driver, or reject with a reason.</p>
-            </div>
+            <h2 id="approvalPageTitle">Approval queue</h2>
+            <p class="page-description">Review pending booking requests, assign an available vehicle and driver, or reject with a reason.</p>
           </div>
 
           <div id="approvalRestrictedNotice" class="panel" hidden>
@@ -155,11 +169,8 @@
 
         <section id="page-users" class="page-view" aria-labelledby="usersPageTitle" hidden>
           <div class="page-heading">
-            <div>
-              <p class="eyebrow">ACCESS &amp; DISPATCH</p>
-              <h2 id="usersPageTitle">Drivers &amp; Users</h2>
-              <p class="page-description">Monitor driver availability from approved schedules and review MyGeotab user clearances.</p>
-            </div>
+            <h2 id="usersPageTitle">Drivers &amp; Users</h2>
+            <p class="page-description">Monitor driver availability from approved schedules and review MyGeotab user clearances.</p>
           </div>
 
           <div id="usersRestrictedNotice" class="panel" hidden>
@@ -228,9 +239,7 @@
                     </tr>
                   </thead>
                   <tbody id="driverBoardBody">
-                    <tr>
-                      <td colspan="4"><p class="empty table-empty">Driver data has not been loaded.</p></td>
-                    </tr>
+                    <tr><td colspan="4"><p class="empty table-empty">Driver data has not been loaded.</p></td></tr>
                   </tbody>
                 </table>
               </div>
@@ -274,9 +283,7 @@
                     </tr>
                   </thead>
                   <tbody id="userListBody">
-                    <tr>
-                      <td colspan="5"><p class="empty table-empty">User data has not been loaded.</p></td>
-                    </tr>
+                    <tr><td colspan="5"><p class="empty table-empty">User data has not been loaded.</p></td></tr>
                   </tbody>
                 </table>
               </div>
@@ -287,11 +294,8 @@
 
         <section id="page-reports" class="page-view" aria-labelledby="reportsPageTitle" hidden>
           <div class="page-heading">
-            <div>
-              <p class="eyebrow">ANALYTICS</p>
-              <h2 id="reportsPageTitle">Reports</h2>
-              <p class="page-description">Insights into booking requests, approvals, driver assignments, and fleet usage.</p>
-            </div>
+            <h2 id="reportsPageTitle">Reports</h2>
+            <p class="page-description">Insights into booking requests, approvals, driver assignments, and fleet usage.</p>
           </div>
 
           <section class="panel report-filter-panel" aria-labelledby="reportFiltersTitle">
@@ -389,9 +393,7 @@
                   </tr>
                 </thead>
                 <tbody id="reportHistoryBody">
-                  <tr>
-                    <td colspan="9"><p class="empty table-empty">Booking history will appear after the data loads.</p></td>
-                  </tr>
+                  <tr><td colspan="9"><p class="empty table-empty">Booking history will appear after the data loads.</p></td></tr>
                 </tbody>
               </table>
             </div>
@@ -407,11 +409,8 @@
 
         <section id="page-vehicles" class="page-view" aria-labelledby="vehiclesPageTitle" hidden>
           <div class="page-heading">
-            <div>
-              <p class="eyebrow">FLEET</p>
-              <h2 id="vehiclesPageTitle">Vehicles</h2>
-              <p class="page-description">Real-time booking availability and operational schedule for vehicles visible to this account.</p>
-            </div>
+            <h2 id="vehiclesPageTitle">Vehicles</h2>
+            <p class="page-description">Real-time booking availability and operational schedule for vehicles visible to this account.</p>
           </div>
 
           <div class="kpi-grid-3">
@@ -465,9 +464,7 @@
                   </tr>
                 </thead>
                 <tbody id="vehicleBoardBody">
-                  <tr>
-                    <td colspan="4"><p class="empty table-empty">Loading vehicles...</p></td>
-                  </tr>
+                  <tr><td colspan="4"><p class="empty table-empty">Loading vehicles...</p></td></tr>
                 </tbody>
               </table>
             </div>
@@ -478,16 +475,16 @@
     </div>
   </main>
 
-  <script src="js/domain/user-domain.js?v=20261125-2"></script>
-  <script src="js/domain/booking-domain.js?v=20261125-2"></script>
-  <script src="js/services/geotab-api.js?v=20261125-2"></script>
-  <script src="js/ui/formatters.js?v=20261125-2"></script>
-  <script src="js/ui/vehicles-view.js?v=20261125-2"></script>
-  <script src="js/ui/users-view.js?v=20261125-2"></script>
-  <script src="js/ui/reports-view.js?v=20261125-2"></script>
-  <script src="js/ui/booking-view.js?v=20261125-2"></script>
-  <script src="js/ui/approval-review-form.js?v=20261125-2"></script>
-  <script src="js/ui/approval-view.js?v=20261125-2"></script>
-  <script src="js/app.js?v=20261125-2"></script>
+  <script src="js/domain/user-domain.js?v=20261126-1"></script>
+  <script src="js/domain/booking-domain.js?v=20261126-1"></script>
+  <script src="js/services/geotab-api.js?v=20261126-1"></script>
+  <script src="js/ui/formatters.js?v=20261126-1"></script>
+  <script src="js/ui/vehicles-view.js?v=20261126-1"></script>
+  <script src="js/ui/users-view.js?v=20261126-1"></script>
+  <script src="js/ui/reports-view.js?v=20261126-1"></script>
+  <script src="js/ui/booking-view.js?v=20261126-1"></script>
+  <script src="js/ui/approval-review-form.js?v=20261126-1"></script>
+  <script src="js/ui/approval-view.js?v=20261126-1"></script>
+  <script src="js/app.js?v=20261126-1"></script>
 </body>
 </html>
