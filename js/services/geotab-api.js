@@ -170,6 +170,84 @@
     }
   }
 
+  async function resolveDriverIdentity(api, userName) {
+    var fallbackLogin = String(userName || '').trim();
+    var fallback = {
+      id: '',
+      login: fallbackLogin,
+      firstName: '',
+      lastName: '',
+      fullName: fallbackLogin,
+      isDriver: null
+    };
+    if (!api || !fallbackLogin) return fallback;
+
+    try {
+      var users = await apiCall(api, 'Get', {
+        typeName: 'User',
+        search: { name: fallbackLogin }
+      });
+      var list = Array.isArray(users) ? users : [];
+      var matched = list.find(function (item) {
+        return item && String(item.name || '').toLowerCase() === fallbackLogin.toLowerCase();
+      }) || list[0] || null;
+      if (!matched) return fallback;
+
+      var normalized = normalizeUser(matched);
+      var fullName = [normalized.firstName, normalized.lastName].filter(Boolean).join(' ').trim();
+      return {
+        id: normalized.id || '',
+        login: normalized.login || fallbackLogin,
+        firstName: normalized.firstName,
+        lastName: normalized.lastName,
+        fullName: fullName || normalized.login || fallbackLogin,
+        isDriver: normalized.isDriver
+      };
+    } catch (error) {
+      return fallback;
+    }
+  }
+
+  function sendDriverTextMessage(api, params) {
+    params = params || {};
+    var driverId = String(params.driverId || '').trim();
+    var message = String(params.message || '').trim();
+    if (!api || !driverId || !message) {
+      return Promise.reject(new Error('Driver ID and notification message are required.'));
+    }
+
+    var entity = {
+      recipient: { id: driverId },
+      isDirectionToVehicle: true,
+      activeFrom: new Date().toISOString(),
+      messageContent: {
+        contentType: 'Normal',
+        message: message
+      }
+    };
+    if (params.senderUserId) {
+      entity.user = { id: String(params.senderUserId) };
+    }
+
+    return apiCall(api, 'Add', {
+      typeName: 'TextMessage',
+      entity: entity
+    });
+  }
+
+  async function notifyDriverBestEffort(api, params) {
+    params = params || {};
+    if (!api || !params.driverId || !params.message) {
+      return { sent: false, skipped: true, error: null };
+    }
+    try {
+      await sendDriverTextMessage(api, params);
+      return { sent: true, skipped: false, error: null };
+    } catch (error) {
+      return { sent: false, skipped: false, error: error };
+    }
+  }
+
   function createBookingKey() {
     if (root.crypto && root.crypto.randomUUID) return root.crypto.randomUUID();
     return Date.now().toString(36) + '-' + Math.random().toString(36).slice(2);
@@ -188,7 +266,10 @@
     getUsersDirectory: getUsersDirectory,
     normalizeRecords: normalizeRecords,
     normalizeUser: normalizeUser,
+    notifyDriverBestEffort: notifyDriverBestEffort,
     resolveCurrentUserClearance: resolveCurrentUserClearance,
+    resolveDriverIdentity: resolveDriverIdentity,
+    sendDriverTextMessage: sendDriverTextMessage,
     updateBookingRecord: updateBookingRecord
   };
 }(typeof globalThis !== 'undefined' ? globalThis : this));

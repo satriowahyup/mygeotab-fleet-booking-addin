@@ -3,6 +3,7 @@
 
   function createBookingView(deps) {
     var domain = deps.bookingDomain;
+    var driverDomain = deps.driverScheduleDomain;
     var apiService = deps.apiService;
     var fmt = deps.formatters;
     var state = deps.state;
@@ -338,6 +339,7 @@
           throw new Error('This booking cannot be cancelled.');
         }
 
+        var wasScheduled = domain.isScheduledStatus(record.details && record.details.status);
         var now = new Date().toISOString();
         var details = Object.assign({}, record.details, {
           status: 'cancelled',
@@ -347,13 +349,27 @@
         });
         await apiService.updateBookingRecord(state.api, record, details);
 
+        var notifyResult = { sent: false, skipped: true, error: null };
+        if (wasScheduled && details.driverId && driverDomain && apiService.notifyDriverBestEffort) {
+          notifyResult = await apiService.notifyDriverBestEffort(state.api, {
+            driverId: details.driverId,
+            senderUserId: state.currentUser && state.currentUser.id,
+            message: driverDomain.buildCancellationNotificationText(details, fmt)
+          });
+        }
+
         var refreshed = await onDataChanged(true);
         if (String(editingRecordId) === String(id)) resetForm();
+        var notifySuffix = notifyResult.sent
+          ? ' Cancellation notice sent to the assigned driver.'
+          : (notifyResult.skipped
+            ? ''
+            : ' Driver notification could not be delivered.');
         if (!refreshed) {
-          setStatus('Booking cancelled, but the list could not be refreshed. Reload the add-in to verify.', true);
+          setStatus('Booking cancelled, but the list could not be refreshed. Reload the add-in to verify.' + notifySuffix, true);
           return;
         }
-        setStatus('Booking cancelled successfully.', false);
+        setStatus('Booking cancelled successfully.' + notifySuffix, false);
       } catch (error) {
         setStatus('Unable to cancel booking: ' + fmt.errorText(error), true);
       } finally {

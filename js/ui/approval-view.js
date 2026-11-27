@@ -3,6 +3,7 @@
 
   function createApprovalView(deps) {
     var domain = deps.bookingDomain;
+    var driverDomain = deps.driverScheduleDomain;
     var userDomain = deps.userDomain;
     var apiService = deps.apiService;
     var fmt = deps.formatters;
@@ -24,6 +25,20 @@
     function setBanner(message, isError) {
       statusBanner.textContent = message;
       statusBanner.setAttribute('data-error', isError ? 'true' : 'false');
+    }
+
+    function notifyDriver(details, eventType) {
+      if (!driverDomain || !details || !details.driverId || !apiService.notifyDriverBestEffort) {
+        return Promise.resolve({ sent: false, skipped: true, error: null });
+      }
+      var text = eventType === 'cancel'
+        ? driverDomain.buildCancellationNotificationText(details, fmt)
+        : driverDomain.buildAssignmentNotificationText(details, fmt);
+      return apiService.notifyDriverBestEffort(state.api, {
+        driverId: details.driverId,
+        senderUserId: state.currentUser && state.currentUser.id,
+        message: text
+      });
     }
 
     function getActiveDevices() {
@@ -327,9 +342,15 @@
             );
             return;
           }
+          var approveNotify = await notifyDriver(updatedDetails, 'approve');
+          var approveSuffix = approveNotify.sent
+            ? ' Notification sent to Geotab Drive.'
+            : (approveNotify.skipped
+              ? ''
+              : ' Geotab Drive notification failed: ' + fmt.errorText(approveNotify.error));
           setBanner(
             'Booking approved and assigned to ' + updatedDetails.deviceName +
-              ' with driver ' + updatedDetails.driverName + '.',
+              ' with driver ' + updatedDetails.driverName + '.' + approveSuffix,
             false
           );
         } else {
@@ -378,13 +399,19 @@
         });
 
         await apiService.updateBookingRecord(state.api, targetRecord, updatedDetails);
+        var cancelNotify = await notifyDriver(updatedDetails, 'cancel');
         reviewingRecordId = null;
         statusBanner.setAttribute('data-sticky', 'true');
         var refreshed = await onDataChanged(true);
+        var cancelSuffix = cancelNotify.sent
+          ? ' Cancellation notice sent to Geotab Drive.'
+          : (cancelNotify.skipped
+            ? ''
+            : ' Geotab Drive notice failed: ' + fmt.errorText(cancelNotify.error));
         setBanner(
           refreshed
-            ? 'Approved booking cancelled. The assigned vehicle and driver are now available again.'
-            : 'Booking cancelled, but the queue could not be refreshed. Reload to verify.',
+            ? 'Approved booking cancelled. The assigned vehicle and driver are now available again.' + cancelSuffix
+            : 'Booking cancelled, but the queue could not be refreshed. Reload to verify.' + cancelSuffix,
           !refreshed
         );
       } catch (error) {

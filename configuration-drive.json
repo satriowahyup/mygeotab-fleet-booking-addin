@@ -1,0 +1,17 @@
+{
+  "name": "Driver Schedule",
+  "supportEmail": "replace-with-support-email@example.com",
+  "version": "1.0.0",
+  "enableViewSecurityId": true,
+  "items": [
+    {
+      "url": "https://YOUR_HTTPS_HOST/driver-schedule.html",
+      "path": "DriveAppLink/",
+      "menuName": {
+        "en": "Driver Schedule",
+        "id": "Jadwal Driver"
+      },
+      "icon": "https://YOUR_HTTPS_HOST/assets/driver-schedule-icon.svg"
+    }
+  ]
+}

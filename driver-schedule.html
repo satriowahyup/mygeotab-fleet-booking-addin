@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Driver Schedule | Geotab Drive</title>
+  <link rel="stylesheet" href="css/drive.css?v=20261127-1">
+</head>
+<body>
+  <main class="drive-app">
+    <header class="drive-header">
+      <div class="drive-header-main">
+        <div class="drive-mark" aria-hidden="true">DS</div>
+        <div class="drive-title-group">
+          <p class="drive-eyebrow">VEHICLE BOOKING</p>
+          <h1>Driver Schedule</h1>
+          <p id="driveDriverBadge" class="drive-driver-badge">Signing in...</p>
+        </div>
+      </div>
+      <div class="drive-header-actions">
+        <button id="driveRefreshButton" class="drive-btn drive-btn-ghost" type="button">Refresh</button>
+      </div>
+    </header>
+
+    <div id="driveStatusBanner" class="drive-status" role="status" aria-live="polite">
+      Loading assigned schedules...
+    </div>
+
+    <section class="drive-kpi-row" aria-label="Schedule summary">
+      <article class="drive-kpi-card drive-kpi-ongoing">
+        <span class="drive-kpi-label">Ongoing</span>
+        <strong id="driveKpiOngoing" class="drive-kpi-value">0</strong>
+      </article>
+      <article class="drive-kpi-card drive-kpi-upcoming">
+        <span class="drive-kpi-label">Upcoming</span>
+        <strong id="driveKpiUpcoming" class="drive-kpi-value">0</strong>
+      </article>
+      <article class="drive-kpi-card drive-kpi-cancelled">
+        <span class="drive-kpi-label">Cancelled</span>
+        <strong id="driveKpiCancelled" class="drive-kpi-value">0</strong>
+      </article>
+    </section>
+
+    <section class="drive-filter-panel" aria-label="Schedule filters">
+      <div class="drive-filter-group">
+        <span class="drive-filter-label">Time range</span>
+        <div id="drivePresetBar" class="drive-chip-bar" role="group" aria-label="Time range presets">
+          <button class="drive-chip" type="button" data-preset="upcoming" aria-pressed="true">Upcoming</button>
+          <button class="drive-chip" type="button" data-preset="today" aria-pressed="false">Today</button>
+          <button class="drive-chip" type="button" data-preset="this_week" aria-pressed="false">This week</button>
+          <button class="drive-chip" type="button" data-preset="custom" aria-pressed="false">Custom date</button>
+          <button class="drive-chip" type="button" data-preset="all" aria-pressed="false">All</button>
+        </div>
+      </div>
+
+      <form id="driveCustomRangeForm" class="drive-custom-range" hidden>
+        <div class="drive-date-grid">
+          <div class="drive-field">
+            <label for="driveFromDate">From</label>
+            <input id="driveFromDate" name="fromDate" type="date">
+          </div>
+          <div class="drive-field">
+            <label for="driveToDate">To</label>
+            <input id="driveToDate" name="toDate" type="date">
+          </div>
+        </div>
+        <div class="drive-custom-actions">
+          <button class="drive-btn drive-btn-primary" type="submit">Apply dates</button>
+          <button id="driveClearDatesButton" class="drive-btn drive-btn-secondary" type="button">Clear</button>
+        </div>
+        <p id="driveFilterError" class="drive-filter-error" role="alert" hidden></p>
+      </form>
+
+      <div class="drive-filter-group">
+        <span class="drive-filter-label">Status</span>
+        <div id="driveStatusBar" class="drive-chip-bar" role="group" aria-label="Booking status filter">
+          <button class="drive-chip" type="button" data-status="all" aria-pressed="true">All</button>
+          <button class="drive-chip" type="button" data-status="approved" aria-pressed="false">Approved</button>
+          <button class="drive-chip" type="button" data-status="cancelled" aria-pressed="false">Cancelled</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="drive-results" aria-labelledby="driveResultsHeading">
+      <div class="drive-results-header">
+        <h2 id="driveResultsHeading">Assigned trips</h2>
+        <span id="driveResultSummary" class="drive-result-summary" aria-live="polite"></span>
+      </div>
+      <p id="driveSyncTimestamp" class="drive-sync-meta" hidden></p>
+      <div id="driveScheduleList" class="drive-card-list">
+        <p class="drive-empty">Loading schedules...</p>
+      </div>
+    </section>
+  </main>
+
+  <script src="js/domain/booking-domain.js?v=20261127-1"></script>
+  <script src="js/domain/driver-schedule-domain.js?v=20261127-1"></script>
+  <script src="js/services/geotab-api.js?v=20261127-1"></script>
+  <script src="js/ui/formatters.js?v=20261127-1"></script>
+  <script src="js/ui/drive-schedule-view.js?v=20261127-1"></script>
+  <script src="js/drive-app.js?v=20261127-1"></script>
+</body>
+</html>

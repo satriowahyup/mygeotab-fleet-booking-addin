@@ -3,6 +3,7 @@
 
   var ns = root.FleetAddIn;
   var bookingDomain = ns.BookingDomain;
+  var driverScheduleDomain = ns.DriverScheduleDomain;
   var userDomain = ns.UserDomain;
   var apiService = ns.GeotabApi;
   var fmt = ns.Formatters;
@@ -59,6 +60,7 @@
   });
   var bookingView = ns.BookingView.create({
     bookingDomain: bookingDomain,
+    driverScheduleDomain: driverScheduleDomain,
     apiService: apiService,
     formatters: fmt,
     state: state,
@@ -68,6 +70,7 @@
   });
   var approvalView = ns.ApprovalView.create({
     bookingDomain: bookingDomain,
+    driverScheduleDomain: driverScheduleDomain,
     userDomain: userDomain,
     apiService: apiService,
     formatters: fmt,
