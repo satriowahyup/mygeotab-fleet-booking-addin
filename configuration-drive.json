@@ -2,6 +2,7 @@
   "name": "Driver Schedule",
   "supportEmail": "replace-with-support-email@example.com",
   "version": "1.0.0",
+  "isSigned": false,
   "enableViewSecurityId": true,
   "items": [
     {

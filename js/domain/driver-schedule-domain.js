@@ -1,15 +1,24 @@
 (function (root, factory) {
   var domain;
   if (typeof module === 'object' && module.exports) {
-    domain = factory(require('./booking-domain'));
+    var nodeBookingDomain = require('./booking-domain');
+    domain = factory(function () { return nodeBookingDomain; });
     module.exports = domain;
   } else {
     root.FleetAddIn = root.FleetAddIn || {};
-    domain = factory(root.FleetAddIn.BookingDomain);
+    domain = factory(function () { return root.FleetAddIn && root.FleetAddIn.BookingDomain; });
     root.FleetAddIn.DriverScheduleDomain = domain;
   }
-}(typeof globalThis !== 'undefined' ? globalThis : this, function (bookingDomain) {
+}(typeof globalThis !== 'undefined' ? globalThis : this, function (getBookingDomain) {
   'use strict';
+
+  function bookingDomain() {
+    var resolved = getBookingDomain();
+    if (!resolved) {
+      throw new Error('BookingDomain module is not loaded.');
+    }
+    return resolved;
+  }
 
   function normalizeDriverIdentity(identity) {
     identity = identity || {};
@@ -37,12 +46,12 @@
   }
 
   function isDriverVisibleStatus(status) {
-    var normalized = bookingDomain.normalizeStatus(status);
+    var normalized = bookingDomain().normalizeStatus(status);
     return normalized === 'approved' || normalized === 'confirmed' || normalized === 'cancelled';
   }
 
   function matchesDriverStatusFilter(status, statusFilter) {
-    var normalized = bookingDomain.normalizeStatus(status);
+    var normalized = bookingDomain().normalizeStatus(status);
     if (!isDriverVisibleStatus(normalized)) return false;
 
     var filter = String(statusFilter || 'all').trim().toLowerCase();
@@ -54,7 +63,7 @@
 
   function getScheduleTimeState(details, nowMs) {
     if (!details) return 'unknown';
-    var status = bookingDomain.normalizeStatus(details.status);
+    var status = bookingDomain().normalizeStatus(details.status);
     if (status === 'cancelled') return 'cancelled';
     if (status !== 'approved' && status !== 'confirmed') return 'unknown';
 
@@ -101,7 +110,7 @@
       return { fromTime: fromTime, toExclusive: toExclusive };
     }
 
-    return bookingDomain.getTimeRangeBounds(preset, now);
+    return bookingDomain().getTimeRangeBounds(preset, now);
   }
 
   function sortDriverSchedules(records, preset, nowMs) {
@@ -141,7 +150,7 @@
       var details = record && record.details;
       if (!isAssignedToDriver(details, identity)) return false;
       if (!matchesDriverStatusFilter(details.status, statusFilter)) return false;
-      return bookingDomain.isBookingInBounds(details, bounds);
+      return bookingDomain().isBookingInBounds(details, bounds);
     });
 
     return sortDriverSchedules(matched, preset, now.getTime());

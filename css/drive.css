@@ -1,28 +1,20 @@
-:root {
-  color-scheme: light;
-  font-family: Inter, "Segoe UI", Arial, sans-serif;
-  color: #1f2937;
-  background: #f3f6fa;
-}
-
-* {
+.drive-app,
+.drive-app * {
   box-sizing: border-box;
 }
 
-[hidden] {
+.drive-app [hidden] {
   display: none !important;
-}
-
-body {
-  margin: 0;
-  padding: 12px 12px 28px;
-  background: #f3f6fa;
-  -webkit-tap-highlight-color: transparent;
 }
 
 .drive-app {
   width: min(760px, 100%);
   margin: 0 auto;
+  padding: 12px 12px 28px;
+  font-family: Inter, "Segoe UI", Arial, sans-serif;
+  color: #1f2937;
+  background: #f3f6fa;
+  -webkit-tap-highlight-color: transparent;
   display: flex;
   flex-direction: column;
   gap: 12px;

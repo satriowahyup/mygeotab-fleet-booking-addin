@@ -1,13 +1,9 @@
 (function (root) {
   'use strict';
 
-  var ns = root.FleetAddIn;
-  var driverDomain = ns.DriverScheduleDomain;
-  var apiService = ns.GeotabApi;
-  var fmt = ns.Formatters;
-
   var CACHE_PREFIX = 'fleetBookingDriveCache:v1:';
   var loadSequence = 0;
+  var view = null;
   var listenersBound = false;
 
   var state = {
@@ -25,17 +21,42 @@
     }
   };
 
-  var view = ns.DriveScheduleView.create({
-    driverScheduleDomain: driverDomain,
-    formatters: fmt,
-    state: state,
-    onRefresh: function () {
-      refresh(state.api, null);
-    },
-    onFilterChanged: function () {
-      view.render();
+  function getModules() {
+    var ns = root.FleetAddIn || {};
+    return {
+      driverDomain: ns.DriverScheduleDomain,
+      apiService: ns.GeotabApi,
+      fmt: ns.Formatters,
+      viewFactory: ns.DriveScheduleView
+    };
+  }
+
+  function ensureView() {
+    if (view) return view;
+    var mods = getModules();
+    if (!mods.driverDomain || !mods.apiService || !mods.fmt || !mods.viewFactory) {
+      return null;
     }
-  });
+    if (!document.getElementById('driveScheduleList')) {
+      return null;
+    }
+    view = mods.viewFactory.create({
+      driverScheduleDomain: mods.driverDomain,
+      formatters: mods.fmt,
+      state: state,
+      onRefresh: function () {
+        refresh(state.api, null);
+      },
+      onFilterChanged: function () {
+        if (view) view.render();
+      }
+    });
+    if (!listenersBound) {
+      view.bind();
+      listenersBound = true;
+    }
+    return view;
+  }
 
   function getCacheKey(database, userName) {
     return CACHE_PREFIX +
@@ -70,7 +91,7 @@
     }
   }
 
-  function applyOfflineFallback(database, userName, reasonText) {
+  function applyOfflineFallback(activeView, database, userName, reasonText) {
     var cached = readOfflineCache(database, userName);
     if (cached) {
       state.driverIdentity = cached.driverIdentity || state.driverIdentity || {
@@ -82,53 +103,56 @@
       state.bookings = cached.bookings;
       state.lastSyncedAtIso = cached.syncedAtIso || '';
       state.usingOfflineCache = true;
-      view.setBanner(reasonText + ' Showing your last synced schedules.', 'warning');
-      view.render();
+      activeView.setBanner(reasonText + ' Showing your last synced schedules.', 'warning');
+      activeView.render();
       return true;
     }
 
     state.bookings = [];
     state.usingOfflineCache = false;
-    view.setBanner(reasonText + ' No offline cache is available yet.', 'error');
-    view.render();
+    activeView.setBanner(reasonText + ' No offline cache is available yet.', 'error');
+    activeView.render();
     return false;
   }
 
   async function refresh(api, driveState) {
-    if (!api) return;
+    var activeView = ensureView();
+    var mods = getModules();
+    if (!api || !activeView || !mods.apiService || !mods.driverDomain || !mods.fmt) return;
+
     state.api = api;
     var sequence = ++loadSequence;
-    view.setLoading(true);
-    view.setBanner('Syncing your assigned schedules...', 'info');
+    activeView.setLoading(true);
+    activeView.setBanner('Syncing your assigned schedules...', 'info');
 
     var sessionUserName = '';
     var sessionDatabase = state.database;
 
     try {
-      var session = await apiService.getSession(api);
+      var session = await mods.apiService.getSession(api);
       if (sequence !== loadSequence) return;
       sessionUserName = (session && session.userName) || '';
       sessionDatabase = (session && session.database) || sessionDatabase;
       state.database = sessionDatabase;
     } catch (sessionError) {
       if (sequence !== loadSequence) return;
-      view.setLoading(false);
-      view.setBanner('Unable to read Geotab Drive session: ' + fmt.errorText(sessionError), 'error');
+      activeView.setLoading(false);
+      activeView.setBanner('Unable to read Geotab Drive session: ' + mods.fmt.errorText(sessionError), 'error');
       return;
     }
 
     var isExplicitlyOffline = (driveState && driveState.online === false) ||
       (typeof navigator !== 'undefined' && navigator.onLine === false);
     if (isExplicitlyOffline) {
-      view.setLoading(false);
-      applyOfflineFallback(sessionDatabase, sessionUserName, 'You are currently offline.');
+      activeView.setLoading(false);
+      applyOfflineFallback(activeView, sessionDatabase, sessionUserName, 'You are currently offline.');
       return;
     }
 
     try {
       var results = await Promise.all([
-        apiService.resolveDriverIdentity(api, sessionUserName),
-        apiService.getBookingRecords(api)
+        mods.apiService.resolveDriverIdentity(api, sessionUserName),
+        mods.apiService.getBookingRecords(api)
       ]);
       if (sequence !== loadSequence) return;
 
@@ -136,8 +160,8 @@
       var allBookings = results[1];
       var driverOnlyRecords = allBookings.filter(function (record) {
         return record && record.details &&
-          driverDomain.isAssignedToDriver(record.details, identity) &&
-          driverDomain.isDriverVisibleStatus(record.details.status);
+          mods.driverDomain.isAssignedToDriver(record.details, identity) &&
+          mods.driverDomain.isDriverVisibleStatus(record.details.status);
       });
 
       var syncedAtIso = new Date().toISOString();
@@ -147,26 +171,21 @@
       state.usingOfflineCache = false;
 
       saveOfflineCache(sessionDatabase, sessionUserName, identity, driverOnlyRecords, syncedAtIso);
-      view.setBanner('', 'info');
-      view.render();
+      activeView.setBanner('', 'info');
+      activeView.render();
     } catch (error) {
       if (sequence !== loadSequence) return;
       applyOfflineFallback(
+        activeView,
         sessionDatabase,
         sessionUserName,
-        'Unable to sync schedules (' + fmt.errorText(error) + ').'
+        'Unable to sync schedules (' + mods.fmt.errorText(error) + ').'
       );
     } finally {
       if (sequence === loadSequence) {
-        view.setLoading(false);
+        activeView.setLoading(false);
       }
     }
-  }
-
-  function bindOnce() {
-    if (listenersBound) return;
-    view.bind();
-    listenersBound = true;
   }
 
   root.geotab = root.geotab || {};
@@ -174,17 +193,19 @@
   root.geotab.addin.driverSchedule = function () {
     return {
       initialize: function (api, driveState, callback) {
-        bindOnce();
-        refresh(api, driveState).then(function () {
-          if (typeof callback === 'function') callback();
-        });
+        state.api = api;
+        try {
+          ensureView();
+        } catch (error) {
+          // Allow Drive to finish initialization even if DOM mounts on focus
+        }
+        if (typeof callback === 'function') callback();
       },
       focus: function (api, driveState) {
-        bindOnce();
         refresh(api, driveState);
       },
       blur: function () {
-        // No background polling timers to clean up
+        // No background timers to clean up
       }
     };
   };
